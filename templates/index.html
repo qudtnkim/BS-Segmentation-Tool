@@ -129,7 +129,7 @@
             </div>
 
             <div class="collapsible-details">
-                <div class="collapsible-summary" onclick="document.getElementById('timelineSection').style.display = document.getElementById('timelineSection').style.display === 'none'?'block':'none'">⏱️ Expand Video Timeline & Playback Trackers</div>
+                <div class="collapsible-summary" onclick="$('timelineSection').style.display = $('timelineSection').style.display === 'none'?'block':'none'">⏱️ Expand Video Timeline & Playback Trackers</div>
                 <div id="timelineSection" style="display: none;" class="collapsible-content timeline-container">
                     <div class="timeline-controls">
                         <button class="btn btn-sm" id="playPauseBtn" style="width: 80px;">▶ Play</button>
@@ -144,7 +144,7 @@
             </div>
 
             <div class="collapsible-details">
-                <div class="collapsible-summary" onclick="document.getElementById('csvSection').style.display = document.getElementById('csvSection').style.display === 'none'?'block':'none'">📊 Expand SurgVU Ground-Truth Logs (tasks.csv / tools.csv)</div>
+                <div class="collapsible-summary" onclick="$('csvSection').style.display = $('csvSection').style.display === 'none'?'block':'none'">📊 Expand SurgVU Ground-Truth Logs (tasks.csv / tools.csv)</div>
                 <div id="csvSection" style="display: none;" class="collapsible-content">
                     <div class="csv-tabs">
                         <button class="csv-tab active" id="tabTasksBtn">Step/Task Segments (tasks.csv)</button>
@@ -226,7 +226,7 @@
                 <div class="tool-buttons">
                     <button class="btn-tool active" id="drawBtn">🖌️ Brush</button>
                     <button class="btn-tool" id="eraseBtn">🧼 Eraser</button>
-                    <button class="btn-tool" id="bucketBtn">🪣 Fill</button>
+                    <button class="btn-tool" id="contourBtn">✏️ Contour</button>
                     <button class="btn-tool" id="bboxBtn">📦 Bbox</button>
                 </div>
                 <div style="display:flex; justify-content:space-between; font-size:12px; align-items:center; background: var(--input-bg); padding: 10px; border-radius: 6px;">
@@ -255,6 +255,12 @@
     </div>
 
     <script>
+        const $ = (id) => document.getElementById(id);
+        async function postJSON(url, body) {
+            const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+            return res.json();
+        }
+
         const defaultClasses = {
             0: { name: "grasping retractor", color: "#e6194b" }, 1: { name: "cadiere forceps", color: "#3cb44b" },
             2: { name: "bipolar forceps", color: "#ffe119" }, 3: { name: "force bipolar", color: "#4363d8" },
@@ -271,7 +277,8 @@
         let state = {
             directory: "", images: [], videos: [], mediaType: "image", currentIndex: -1,
             brushSize: 15, opacity: 0.4, currentClass: 0, 
-            isDrawing: false, isEraser: false, isBboxMode: false, isBucketMode: false,
+            isDrawing: false, isEraser: false, isBboxMode: false, isContourMode: false, isBucketMode: false,
+            contourPoints: [], isDrawingContour: false,
             imageLoaded: false, imageWidth: 0, imageHeight: 0, layers: {}, frameAnnotations: {},
             videoFps: 30, videoFrameCount: 0, videoDuration: 0, videoPlayMode: "native", currentFrameIndexFE: 0,
             reports: {}, classes: JSON.parse(JSON.stringify(defaultClasses)), 
@@ -288,59 +295,57 @@
         let browserMode = 'folder';
 
         let mediaRecorder = null; let audioChunks = [];
-        const videoPlayer = document.getElementById("videoPlayer");
-        const imageCanvas = document.getElementById("imageCanvas");
-        const maskCanvas = document.getElementById("maskCanvas");
-        const bboxCanvas = document.getElementById("bboxCanvas");
-        const canvasContainer = document.getElementById("canvasContainer");
-        const frameReportTextarea = document.getElementById("frameReportTextarea");
-        const classListDiv = document.getElementById("classList");
-        const timelineSlider = document.getElementById("timelineSlider");
+        const videoPlayer = $("videoPlayer");
+        const imageCanvas = $("imageCanvas");
+        const maskCanvas = $("maskCanvas");
+        const bboxCanvas = $("bboxCanvas");
+        const canvasContainer = $("canvasContainer");
+        const frameReportTextarea = $("frameReportTextarea");
+        const classListDiv = $("classList");
+        const timelineSlider = $("timelineSlider");
 
         const imgCtx = imageCanvas.getContext("2d");
         const maskCtx = maskCanvas.getContext("2d", { willReadFrequently: true });
         const bboxCtx = bboxCanvas.getContext("2d");
 
-        function showLoading(msg) { document.getElementById("loadingText").innerText = msg || "처리 중입니다..."; document.getElementById("loadingOverlay").style.display = "flex"; }
-        function hideLoading() { document.getElementById("loadingOverlay").style.display = "none"; }
+        function showLoading(msg) { $("loadingText").innerText = msg || "처리 중입니다..."; $("loadingOverlay").style.display = "flex"; }
+        function hideLoading() { $("loadingOverlay").style.display = "none"; }
 
         // ======== Folder / File Browser Logic ========
-        document.getElementById("selectDirBtn").onclick = () => { browserMode = 'folder'; document.getElementById("browserModalTitle").innerText = "📂 Select Folder"; document.getElementById("folderBrowserModal").classList.add("show"); browseTo(""); };
-        document.getElementById("selectVideoBtn").onclick = () => { browserMode = 'file'; document.getElementById("browserModalTitle").innerText = "🎞️ Select a Video File"; document.getElementById("folderBrowserModal").classList.add("show"); browseTo(""); };
+        $("selectDirBtn").onclick = () => { browserMode = 'folder'; $("browserModalTitle").innerText = "📂 Select Folder"; $("folderBrowserModal").classList.add("show"); browseTo(""); };
+        $("selectVideoBtn").onclick = () => { browserMode = 'file'; $("browserModalTitle").innerText = "🎞️ Select a Video File"; $("folderBrowserModal").classList.add("show"); browseTo(""); };
         
-        document.getElementById("cancelBrowserBtn").onclick = () => document.getElementById("folderBrowserModal").classList.remove("show");
-        document.getElementById("confirmBrowserBtn").onclick = () => { document.getElementById("directoryInput").value = document.getElementById("browserPathInput").value; loadFolder(); document.getElementById("folderBrowserModal").classList.remove("show"); };
-        document.getElementById("browserUpBtn").onclick = () => { let p = document.getElementById("browserPathInput").value; browseTo(p.substring(0, p.lastIndexOf(p.includes("\\")?'\\':'/'))); };
-        document.getElementById("browserGoBtn").onclick = () => browseTo(document.getElementById("browserPathInput").value);
-        document.getElementById("loadDirBtn").onclick = loadFolder;
+        $("cancelBrowserBtn").onclick = () => $("folderBrowserModal").classList.remove("show");
+        $("confirmBrowserBtn").onclick = () => { $("directoryInput").value = $("browserPathInput").value; loadFolder(); $("folderBrowserModal").classList.remove("show"); };
+        $("browserUpBtn").onclick = () => { let p = $("browserPathInput").value; browseTo(p.substring(0, p.lastIndexOf(p.includes("\\")?'\\':'/'))); };
+        $("browserGoBtn").onclick = () => browseTo($("browserPathInput").value);
+        $("loadDirBtn").onclick = loadFolder;
 
         async function browseTo(path) {
-            const r = await fetch("/api/browse_directory", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path }) });
-            const res = await r.json();
+            const res = await postJSON("/api/browse_directory", { path });
             if (res.success) {
-                document.getElementById("browserPathInput").value = res.current_path;
-                document.getElementById("browserList").innerHTML = "";
+                $("browserPathInput").value = res.current_path;
+                $("browserList").innerHTML = "";
                 res.directories.forEach(d => {
                     const item = document.createElement("div"); item.className = "browser-item"; item.innerText = `📁 ${d}`;
                     item.onclick = () => browseTo(res.current_path + (res.current_path.includes("\\")?"\\":"/") + d);
-                    document.getElementById("browserList").appendChild(item);
+                    $("browserList").appendChild(item);
                 });
                 res.files.forEach(f => {
                     const item = document.createElement("div"); item.className = "browser-item"; item.innerText = `📄 ${f.name}`;
                     if (browserMode === 'file' && f.is_media) {
                         item.style.color = "var(--accent-color)";
-                        item.onclick = () => { document.getElementById("browserPathInput").value = res.current_path + (res.current_path.includes("\\")?"\\":"/") + f.name; };
+                        item.onclick = () => { $("browserPathInput").value = res.current_path + (res.current_path.includes("\\")?"\\":"/") + f.name; };
                     } else if (browserMode === 'folder') {
                         item.style.color = "var(--text-sub)"; item.style.cursor = "not-allowed";
                     }
-                    document.getElementById("browserList").appendChild(item);
+                    $("browserList").appendChild(item);
                 });
             }
         }
 
         async function loadFolder() {
-            const response = await fetch("/api/load_directory", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ directory: document.getElementById("directoryInput").value }) });
-            const res = await response.json();
+            const res = await postJSON("/api/load_directory", { directory: $("directoryInput").value });
             if (res.success) {
                 state.directory = res.directory; state.images = res.images; state.videos = res.videos;
                 renderFileList();
@@ -350,14 +355,14 @@
         }
 
         function renderFileList() {
-            document.getElementById("imageList").innerHTML = "";
+            $("imageList").innerHTML = "";
             state.videos.forEach((v, i) => {
                 const div = document.createElement("div"); div.className = `image-item ${state.mediaType==='video'&&state.currentIndex===i?'active':''}`;
-                div.innerText = `🎥 ${v}`; div.onclick = () => selectFile(i, "video"); document.getElementById("imageList").appendChild(div);
+                div.innerText = `🎥 ${v}`; div.onclick = () => selectFile(i, "video"); $("imageList").appendChild(div);
             });
             state.images.forEach((img, i) => {
                 const div = document.createElement("div"); div.className = `image-item ${state.mediaType==='image'&&state.currentIndex===i?'active':''}`;
-                div.innerText = `🖼️ ${img}`; div.onclick = () => selectFile(i, "image"); document.getElementById("imageList").appendChild(div);
+                div.innerText = `🖼️ ${img}`; div.onclick = () => selectFile(i, "image"); $("imageList").appendChild(div);
             });
         }
 
@@ -366,8 +371,8 @@
             state.undoStack = []; // 파일 변경 시 히스토리 초기화
             renderFileList();
             
-            const rRep = await fetch("/api/load_reports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ directory: state.directory, video_name: type === "video" ? state.videos[idx] : "" }) });
-            state.reports = (await rRep.json()).reports || {};
+            const repRes = await postJSON("/api/load_reports", { directory: state.directory, video_name: type === "video" ? state.videos[idx] : "" });
+            state.reports = repRes.reports || {};
 
             await loadCsvRecords();
 
@@ -377,7 +382,7 @@
                 imageCanvas.style.display = state.videoPlayMode === "native" ? "none" : "block";
                 videoPlayer.style.display = state.videoPlayMode === "native" ? "block" : "none";
 
-                const info = await (await fetch("/api/video_info", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ directory: state.directory, video_name: vName }) })).json();
+                const info = await postJSON("/api/video_info", { directory: state.directory, video_name: vName });
                 if (info.success) {
                     state.videoFps = info.fps || 30; state.videoFrameCount = info.frame_count; state.videoDuration = info.duration;
                     state.imageWidth = info.width; state.imageHeight = info.height;
@@ -385,7 +390,7 @@
                     state.imageLoaded = true; resizeCanvasContainer();
                     state.frameAnnotations = {};
                     
-                    const cocoRes = await (await fetch("/api/get_coco_annotations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ directory: state.directory, video_name: vName }) })).json();
+                    const cocoRes = await postJSON("/api/get_coco_annotations", { directory: state.directory, video_name: vName });
                     if (cocoRes.success && cocoRes.has_annotations) {
                         cocoRes.coco_data.annotations.forEach(ann => {
                             const fIdx = ann.image_id;
@@ -395,7 +400,7 @@
                                 state.frameAnnotations[fIdx].bboxes[ann.category_id].push([...ann.bbox, ann.instance_id || 1]);
                             }
                             if (ann.segmentation && ann.segmentation.counts) {
-                                state.frameAnnotations[fIdx].masks[ann.category_id] = cocoRleDecode(ann.segmentation.counts, info.width, info.height);
+                                state.frameAnnotations[fIdx].masks[ann.category_id] = rleDecode(ann.segmentation.counts, info.width, info.height);
                             }
                         });
                     }
@@ -421,10 +426,10 @@
                     state.layers = {};
                     Object.keys(state.classes).forEach(cid => { state.layers[cid] = new Uint8Array(imgObj.width * imgObj.height); });
                     
-                    const maskRes = await (await fetch("/api/get_mask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ directory: state.directory, image_name: imgName }) })).json();
+                    const maskRes = await postJSON("/api/get_mask", { directory: state.directory, image_name: imgName });
                     if (maskRes.success && maskRes.has_mask) {
                         Object.keys(maskRes.mask_data.class_layers).forEach(cid => {
-                            state.layers[cid] = cocoRleDecode(maskRes.mask_data.class_layers[cid], state.imageWidth, state.imageHeight);
+                            state.layers[cid] = rleDecode(maskRes.mask_data.class_layers[cid], state.imageWidth, state.imageHeight);
                         });
                     }
                     loadFrameReport(0); scheduleRedraw();
@@ -438,8 +443,7 @@
             if (!state.directory) return;
             const vidName = state.mediaType === "video" ? state.videos[state.currentIndex] : "";
             try {
-                const response = await fetch("/api/get_csv_annotations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ directory: state.directory, video_name: vidName }) });
-                const res = await response.json();
+                const res = await postJSON("/api/get_csv_annotations", { directory: state.directory, video_name: vidName });
                 state.tasksList = res.success ? (res.tasks || []) : [];
                 state.toolsList = res.success ? (res.tools || []) : [];
                 renderCsvTables(); setCsvModified(false);
@@ -470,35 +474,35 @@
 
         function setCsvModified(val) {
             state.csvModified = val;
-            const txt = document.getElementById("csvStatusText");
+            const txt = $("csvStatusText");
             if (val) { txt.innerText = "Unsaved CSV modifications"; txt.style.color = "var(--danger-hover)"; }
             else { txt.innerText = "No unsaved CSV changes"; txt.style.color = "var(--text-sub)"; }
         }
 
-        document.getElementById("tabTasksBtn").onclick = function() { this.classList.add("active"); document.getElementById("tabToolsBtn").classList.remove("active"); document.getElementById("tabTasksContent").style.display = "block"; document.getElementById("tabToolsContent").style.display = "none"; };
-        document.getElementById("tabToolsBtn").onclick = function() { this.classList.add("active"); document.getElementById("tabTasksBtn").classList.remove("active"); document.getElementById("tabToolsContent").style.display = "block"; document.getElementById("tabTasksContent").style.display = "none"; };
+        $("tabTasksBtn").onclick = function() { this.classList.add("active"); $("tabToolsBtn").classList.remove("active"); $("tabTasksContent").style.display = "block"; $("tabToolsContent").style.display = "none"; };
+        $("tabToolsBtn").onclick = function() { this.classList.add("active"); $("tabTasksBtn").classList.remove("active"); $("tabToolsContent").style.display = "block"; $("tabTasksContent").style.display = "none"; };
 
-        document.getElementById("addTaskBtn").onclick = () => {
-            const name = document.getElementById("taskNameInput").value.trim();
-            const startVal = parseFloat(document.getElementById("taskStartInput").value);
-            const stopVal = parseFloat(document.getElementById("taskStopInput").value);
+        $("addTaskBtn").onclick = () => {
+            const name = $("taskNameInput").value.trim();
+            const startVal = parseFloat($("taskStartInput").value);
+            const stopVal = parseFloat($("taskStopInput").value);
             if (!name || isNaN(startVal) || isNaN(stopVal)) return alert("Valid Task Name and Times required.");
-            state.tasksList.push({ index: state.tasksList.length, start_part: document.getElementById("taskStartPartInput").value || 1, start_time: startVal, stop_part: document.getElementById("taskStopPartInput").value || 1, stop_time: stopVal, groundtruth_taskname: name });
+            state.tasksList.push({ index: state.tasksList.length, start_part: $("taskStartPartInput").value || 1, start_time: startVal, stop_part: $("taskStopPartInput").value || 1, stop_time: stopVal, groundtruth_taskname: name });
             renderCsvTables(); setCsvModified(true);
         };
 
-        document.getElementById("addToolBtn").onclick = () => {
-            const inst = document.getElementById("toolInstallInput").value.trim(); const uninst = document.getElementById("toolUninstallInput").value.trim();
+        $("addToolBtn").onclick = () => {
+            const inst = $("toolInstallInput").value.trim(); const uninst = $("toolUninstallInput").value.trim();
             if (!inst || !uninst) return alert("Install & Uninstall times required.");
-            state.toolsList.push({ index: state.toolsList.length, install_case_part: document.getElementById("toolInstallPartInput").value || 1, install_case_time: inst, uninstall_case_part: document.getElementById("toolUninstallPartInput").value || 1, uninstall_case_time: uninst, arm: document.getElementById("toolArmInput").value, commercial_toolname: document.getElementById("toolCommNameInput").value.trim(), groundtruth_toolname: document.getElementById("toolGtNameInput").value.trim() });
+            state.toolsList.push({ index: state.toolsList.length, install_case_part: $("toolInstallPartInput").value || 1, install_case_time: inst, uninstall_case_part: $("toolUninstallPartInput").value || 1, uninstall_case_time: uninst, arm: $("toolArmInput").value, commercial_toolname: $("toolCommNameInput").value.trim(), groundtruth_toolname: $("toolGtNameInput").value.trim() });
             renderCsvTables(); setCsvModified(true);
         };
 
-        document.getElementById("saveCsvBtn").onclick = async () => {
+        $("saveCsvBtn").onclick = async () => {
             if (!state.directory) return;
             const vidName = state.mediaType === "video" ? state.videos[state.currentIndex] : "";
-            const r = await fetch("/api/save_csv_annotations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ directory: state.directory, video_name: vidName, tasks: state.tasksList, tools: state.toolsList }) });
-            if ((await r.json()).success) { showToast("CSV 텍스트 성공적으로 저장 완료!"); setCsvModified(false); }
+            const res = await postJSON("/api/save_csv_annotations", { directory: state.directory, video_name: vidName, tasks: state.tasksList, tools: state.toolsList });
+            if (res.success) { showToast("CSV 텍스트 성공적으로 저장 완료!"); setCsvModified(false); }
         };
 
         function formatSecondsToHMSf(secVal) {
@@ -507,7 +511,7 @@
             return `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}.${String(ms).padStart(6,'0')}`;
         }
         
-        document.getElementById("flagIntervalBtn").onclick = () => {
+        $("flagIntervalBtn").onclick = () => {
             if (state.mediaType !== "video" || !state.imageLoaded) return;
             const curFrame = getCurrentFrameIndex();
             if (state.timelineStart === null || (state.timelineStart !== null && state.timelineEnd !== null)) {
@@ -517,10 +521,10 @@
                 if (state.timelineEnd < state.timelineStart) { const tmp = state.timelineStart; state.timelineStart = state.timelineEnd; state.timelineEnd = tmp; }
                 showToast("끝점 저장 완료 -> CSV 자동 기입됨");
                 const startSec = state.timelineStart / state.videoFps, stopSec = state.timelineEnd / state.videoFps;
-                if (document.getElementById("tabTasksBtn").classList.contains("active")) {
-                    document.getElementById("taskStartInput").value = startSec.toFixed(3); document.getElementById("taskStopInput").value = stopSec.toFixed(3);
+                if ($("tabTasksBtn").classList.contains("active")) {
+                    $("taskStartInput").value = startSec.toFixed(3); $("taskStopInput").value = stopSec.toFixed(3);
                 } else {
-                    document.getElementById("toolInstallInput").value = formatSecondsToHMSf(startSec); document.getElementById("toolUninstallInput").value = formatSecondsToHMSf(stopSec);
+                    $("toolInstallInput").value = formatSecondsToHMSf(startSec); $("toolUninstallInput").value = formatSecondsToHMSf(stopSec);
                 }
             }
         };
@@ -538,18 +542,16 @@
                 toAnn.bboxes = JSON.parse(JSON.stringify(fromAnn.bboxes));
             }
 
-            if (fromAnn.masks && Object.keys(fromAnn.masks).length > 0 && Object.keys(toAnn.masks).length === 0 && document.getElementById("aiAutoPropose").checked) {
+            if (fromAnn.masks && Object.keys(fromAnn.masks).length > 0 && Object.keys(toAnn.masks).length === 0 && $("aiAutoPropose").checked) {
                 const vidName = state.videos[state.currentIndex];
-                const encodeReq = await fetch("/api/sam_encode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ directory: state.directory, video_name: vidName, frame_index: toFrame }) });
-                const encodeRes = await encodeReq.json();
+                const encodeRes = await postJSON("/api/sam_encode", { directory: state.directory, video_name: vidName, frame_index: toFrame });
                 if (!encodeRes.success) { showToast(encodeRes.error, true); return; }
 
                 const jobs = Object.keys(fromAnn.masks).map(async (cidStr) => {
                     const cid = parseInt(cidStr);
                     if (!fromAnn.masks[cid] || fromAnn.masks[cid].every(v => v === 0)) return;
-                    const r = await fetch("/api/sam_refine", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ directory: state.directory, video_name: vidName, frame_index: toFrame, class_id: cid, rle: rleEncode(fromAnn.masks[cid]), width: state.imageWidth, height: state.imageHeight }) });
-                    const res = await r.json();
-                    if (res.success && res.rle) toAnn.masks[cid] = cocoRleDecode(res.rle, state.imageWidth, state.imageHeight);
+                    const res = await postJSON("/api/sam_refine", { directory: state.directory, video_name: vidName, frame_index: toFrame, class_id: cid, rle: rleEncode(fromAnn.masks[cid]), width: state.imageWidth, height: state.imageHeight });
+                    if (res.success && res.rle) toAnn.masks[cid] = rleDecode(res.rle, state.imageWidth, state.imageHeight);
                 });
                 await Promise.all(jobs);
             }
@@ -561,7 +563,7 @@
             if (current === target) return;
             
             saveCurrentFrameReport(activeReportFrame); 
-            const autoPropose = document.getElementById("aiAutoPropose").checked;
+            const autoPropose = $("aiAutoPropose").checked;
             const hasSourceMask = state.frameAnnotations[current] && state.frameAnnotations[current].masks && Object.keys(state.frameAnnotations[current].masks).length > 0;
             const targetHasMask = state.frameAnnotations[target] && state.frameAnnotations[target].masks && Object.keys(state.frameAnnotations[target].masks).length > 0;
             
@@ -587,7 +589,7 @@
             }
         }
 
-        document.getElementById("playPauseBtn").onclick = function() {
+        $("playPauseBtn").onclick = function() {
             if (state.videoPlayMode === "native") {
                 if (videoPlayer.paused) { videoPlayer.play(); this.innerText = "⏸ Pause"; trackVideoLoop(); }
                 else { videoPlayer.pause(); this.innerText = "▶ Play"; }
@@ -599,7 +601,7 @@
                 const cur = getCurrentFrameIndex();
                 timelineSlider.value = cur; updateTimelineGUI(cur); scheduleRedraw(); loadFrameReport(cur);
                 requestAnimationFrame(trackVideoLoop);
-            } else { document.getElementById("playPauseBtn").innerText = "▶ Play"; }
+            } else { $("playPauseBtn").innerText = "▶ Play"; }
         }
 
         videoPlayer.onseeked = async () => {
@@ -619,18 +621,17 @@
             if (fIdx === -1) return;
             const val = frameReportTextarea.value.trim();
             if (val) state.reports[String(fIdx)] = val; else delete state.reports[String(fIdx)];
-            fetch("/api/save_reports", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ directory: state.directory, video_name: state.mediaType === "video" ? state.videos[state.currentIndex] : "", reports: state.reports }) });
+            postJSON("/api/save_reports", { directory: state.directory, video_name: state.mediaType === "video" ? state.videos[state.currentIndex] : "", reports: state.reports });
         }
         frameReportTextarea.oninput = (e) => { if (activeReportFrame !== -1) state.reports[String(activeReportFrame)] = e.target.value; };
 
-        document.getElementById("exportExcelBtn").onclick = async () => {
+        $("exportExcelBtn").onclick = async () => {
             saveCurrentFrameReport(activeReportFrame);
-            const r = await fetch("/api/export_reports_excel", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ directory: state.directory, video_name: state.mediaType === "video" ? state.videos[state.currentIndex] : "", reports: state.reports, fps: state.videoFps }) });
-            const res = await r.json();
+            const res = await postJSON("/api/export_reports_excel", { directory: state.directory, video_name: state.mediaType === "video" ? state.videos[state.currentIndex] : "", reports: state.reports, fps: state.videoFps });
             if (res.success) alert(`Excel compiled successfully:\n${res.path}`);
         };
 
-        document.getElementById("sttRecordBtn").onclick = async function() {
+        $("sttRecordBtn").onclick = async function() {
             if (mediaRecorder && mediaRecorder.state === "recording") {
                 mediaRecorder.stop(); this.classList.remove("recording"); this.innerText = "⏳";
             } else {
@@ -647,7 +648,7 @@
                         frameReportTextarea.value = (frameReportTextarea.value + " " + res.text).trim();
                         if (activeReportFrame !== -1) state.reports[String(activeReportFrame)] = frameReportTextarea.value;
                     }
-                    document.getElementById("sttRecordBtn").innerText = "🎙️";
+                    $("sttRecordBtn").innerText = "🎙️";
                 };
                 mediaRecorder.start(); this.classList.add("recording"); this.innerText = "🔴";
             }
@@ -725,24 +726,29 @@
             showToast("실행 취소 (Undo)");
         }
 
-        function floodFill(layer, startX, startY, width, height, targetVal, fillVal) {
-            const startIdx = startY * width + startX;
-            if (layer[startIdx] === fillVal) return; 
+        // 폐곡선(폴리곤) 내부를 채우는 스캔라인 채우기. even-odd 규칙으로 내부 판정.
+        function fillPolygon(layer, pts, width, height, value) {
+            if (pts.length < 3) return;
+            let minY = Infinity, maxY = -Infinity;
+            for (const p of pts) { if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y; }
+            minY = Math.max(0, Math.floor(minY));
+            maxY = Math.min(height - 1, Math.ceil(maxY));
+            const n = pts.length;
 
-            const qX = new Int32Array(width * height);
-            const qY = new Int32Array(width * height);
-            let head = 0, tail = 0;
-
-            qX[tail] = startX; qY[tail] = startY; tail++;
-            layer[startIdx] = fillVal;
-
-            while (head < tail) {
-                const x = qX[head]; const y = qY[head]; head++;
-
-                if (x > 0 && layer[y * width + (x - 1)] === targetVal) { layer[y * width + (x - 1)] = fillVal; qX[tail] = x - 1; qY[tail] = y; tail++; }
-                if (x < width - 1 && layer[y * width + (x + 1)] === targetVal) { layer[y * width + (x + 1)] = fillVal; qX[tail] = x + 1; qY[tail] = y; tail++; }
-                if (y > 0 && layer[(y - 1) * width + x] === targetVal) { layer[(y - 1) * width + x] = fillVal; qX[tail] = x; qY[tail] = y - 1; tail++; }
-                if (y < height - 1 && layer[(y + 1) * width + x] === targetVal) { layer[(y + 1) * width + x] = fillVal; qX[tail] = x; qY[tail] = y + 1; tail++; }
+            for (let y = minY; y <= maxY; y++) {
+                const crossings = [];
+                for (let i = 0, j = n - 1; i < n; j = i++) {
+                    const yi = pts[i].y, yj = pts[j].y;
+                    if ((yi > y) !== (yj > y)) {
+                        crossings.push(pts[i].x + (y - yi) / (yj - yi) * (pts[j].x - pts[i].x));
+                    }
+                }
+                crossings.sort((a, b) => a - b);
+                for (let k = 0; k + 1 < crossings.length; k += 2) {
+                    const xStart = Math.max(0, Math.ceil(crossings[k]));
+                    const xEnd = Math.min(width - 1, Math.floor(crossings[k + 1]));
+                    for (let x = xStart; x <= xEnd; x++) layer[y * width + x] = value;
+                }
             }
         }
 
@@ -800,13 +806,9 @@
             // ★ 작업 시작 전 히스토리 저장 (Undo 기록)
             saveHistory();
             
-            if (state.isBucketMode) {
-                const layer = getActiveMaskLayer(state.currentClass);
-                const startIdx = pos.y * state.imageWidth + pos.x;
-                const targetVal = layer[startIdx];
-                const fillVal = targetVal === 0 ? 1 : 0;
-                floodFill(layer, pos.x, pos.y, state.imageWidth, state.imageHeight, targetVal, fillVal);
-                scheduleRedraw();
+            if (state.isContourMode) {
+                state.isDrawingContour = true;
+                state.contourPoints = [pos];
             }
             else if (state.isBboxMode) { 
                 state.isDrawingBbox = true; state.bboxStart = pos; state.bboxCurrent = pos; 
@@ -828,6 +830,11 @@
                 state.bboxCurrent = pos;
                 scheduleRedraw();
             }
+            else if (state.isDrawingContour && state.isContourMode) {
+                const last = state.contourPoints[state.contourPoints.length - 1];
+                if (!last || Math.hypot(pos.x - last.x, pos.y - last.y) >= 2) state.contourPoints.push(pos);
+                scheduleRedraw();
+            }
         };
 
         window.onmouseup = function(e) {
@@ -842,6 +849,15 @@
                 const bw = Math.abs(pos.x - state.bboxStart.x), bh = Math.abs(pos.y - state.bboxStart.y);
                 if (bw > 3 && bh > 3) state.frameAnnotations[cur].bboxes[state.currentClass].push([bx, by, bw, bh, 1]);
                 state.bboxCurrent = null;
+                scheduleRedraw();
+            }
+            if (state.isDrawingContour && state.isContourMode) {
+                state.isDrawingContour = false;
+                if (state.contourPoints.length >= 3) {
+                    const layer = getActiveMaskLayer(state.currentClass);
+                    fillPolygon(layer, state.contourPoints, state.imageWidth, state.imageHeight, state.isEraser ? 0 : 1);
+                }
+                state.contourPoints = [];
                 scheduleRedraw();
             }
         };
@@ -879,6 +895,39 @@
         function redrawBbox() {
             if (!state.imageLoaded) return;
             bboxCtx.clearRect(0,0,state.imageWidth,state.imageHeight);
+
+            // 그리는 중인 폐곡선 미리보기 (이미지/비디오 공통)
+            if (state.isDrawingContour && state.contourPoints.length > 1) {
+                const cls = state.classes[state.currentClass];
+                bboxCtx.strokeStyle = cls.color;
+                bboxCtx.lineWidth = 2;
+
+                // 실선: 지금까지 그린 경로
+                bboxCtx.setLineDash([]);
+                bboxCtx.beginPath();
+                bboxCtx.moveTo(state.contourPoints[0].x, state.contourPoints[0].y);
+                for (let i = 1; i < state.contourPoints.length; i++) bboxCtx.lineTo(state.contourPoints[i].x, state.contourPoints[i].y);
+                bboxCtx.stroke();
+
+                // 점선: 마지막 점 → 시작점 (폐곡선 예고)
+                const last = state.contourPoints[state.contourPoints.length - 1];
+                const first = state.contourPoints[0];
+                bboxCtx.setLineDash([6, 4]);
+                bboxCtx.globalAlpha = 0.6;
+                bboxCtx.beginPath();
+                bboxCtx.moveTo(last.x, last.y);
+                bboxCtx.lineTo(first.x, first.y);
+                bboxCtx.stroke();
+                bboxCtx.setLineDash([]);
+                bboxCtx.globalAlpha = 1.0;
+
+                // 시작점 원형 마커
+                bboxCtx.fillStyle = cls.color;
+                bboxCtx.beginPath();
+                bboxCtx.arc(first.x, first.y, 5, 0, Math.PI * 2);
+                bboxCtx.fill();
+            }
+
             if (state.mediaType !== "video") return;
             const b = (state.frameAnnotations[getCurrentFrameIndex()] || {}).bboxes || {};
             Object.keys(b).forEach(cid => {
@@ -897,20 +946,20 @@
         }
         function redrawAnnotations() { redrawMasks(); redrawBbox(); }
 
-        // 버튼 클릭 이벤트에 Bucket 연결
-        document.getElementById("drawBtn").onclick = function() { state.isEraser=false; state.isBboxMode=false; state.isBucketMode=false; setActiveToolBtn(this); };
-        document.getElementById("eraseBtn").onclick = function() { state.isEraser=true; state.isBboxMode=false; state.isBucketMode=false; setActiveToolBtn(this); };
-        document.getElementById("bucketBtn").onclick = function() { state.isEraser=false; state.isBboxMode=false; state.isBucketMode=true; setActiveToolBtn(this); };
-        document.getElementById("bboxBtn").onclick = function() { state.isEraser=false; state.isBboxMode=true; state.isBucketMode=false; setActiveToolBtn(this); };
+        // 버튼 클릭 이벤트
+        $("drawBtn").onclick    = function() { state.isEraser=false; state.isBboxMode=false; state.isContourMode=false; state.isBucketMode=false; setActiveToolBtn(this); };
+        $("eraseBtn").onclick   = function() { state.isEraser=true;  state.isBboxMode=false; state.isContourMode=false; state.isBucketMode=false; setActiveToolBtn(this); };
+        $("contourBtn").onclick = function() { state.isEraser=false; state.isBboxMode=false; state.isContourMode=true;  state.isBucketMode=false; setActiveToolBtn(this); };
+        $("bboxBtn").onclick    = function() { state.isEraser=false; state.isBboxMode=true;  state.isContourMode=false; state.isBucketMode=false; setActiveToolBtn(this); };
         
         function setActiveToolBtn(el) { document.querySelectorAll(".btn-tool").forEach(b=>b.classList.remove("active")); el.classList.add("active"); }
 
-        document.getElementById("brushSize").oninput = (e) => { state.brushSize = parseInt(e.target.value); document.getElementById("brushSizeVal").innerText = `${state.brushSize} px`; };
-        document.getElementById("maskOpacity").oninput = (e) => { state.opacity = parseInt(e.target.value)/100; document.getElementById("opacityVal").innerText = `${e.target.value}%`; scheduleRedraw(); };
+        $("brushSize").oninput = (e) => { state.brushSize = parseInt(e.target.value); $("brushSizeVal").innerText = `${state.brushSize} px`; };
+        $("maskOpacity").oninput = (e) => { state.opacity = parseInt(e.target.value)/100; $("opacityVal").innerText = `${e.target.value}%`; scheduleRedraw(); };
         timelineSlider.oninput = (e) => { seekToFrame(parseInt(e.target.value)); };
 
-        document.getElementById("timelinePrevBtn").onclick = () => changeFrame(-1);
-        document.getElementById("timelineNextBtn").onclick = () => changeFrame(1);
+        $("timelinePrevBtn").onclick = () => changeFrame(-1);
+        $("timelineNextBtn").onclick = () => changeFrame(1);
 
         // ======== 저장 로직 ========
         async function syncAnnotationsToServer() {
@@ -945,8 +994,8 @@
                     annotations: annotations
                 };
 
-                const r = await fetch("/api/save_coco_annotations", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ directory: state.directory, video_name: vidName, coco_data: cocoData }) });
-                return (await r.json()).success;
+                const res = await postJSON("/api/save_coco_annotations", { directory: state.directory, video_name: vidName, coco_data: cocoData });
+                return res.success;
             } else {
                 const class_layers = {};
                 Object.keys(state.layers).forEach(cid => {
@@ -954,12 +1003,12 @@
                     if (rle.length > 0) class_layers[cid] = rle;
                 });
                 const maskData = { directory: state.directory, image_name: imgName, width: state.imageWidth, height: state.imageHeight, class_layers: class_layers, classes: state.classes };
-                const r = await fetch("/api/save_mask", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(maskData) });
-                return (await r.json()).success;
+                const res = await postJSON("/api/save_mask", maskData);
+                return res.success;
             }
         }
 
-        document.getElementById("saveBtn").onclick = async function() {
+        $("saveBtn").onclick = async function() {
             saveCurrentFrameReport(activeReportFrame);
             const btn = this; btn.innerText = "저장 중... (Saving...)";
             try {
@@ -987,19 +1036,19 @@
 
             if (key === 'a') changeFrame(-1);
             if (key === 'd') changeFrame(1);
-            if (key === 'f') document.getElementById("bucketBtn").click(); 
-            if (key === 'b') document.getElementById("drawBtn").click(); 
-            if (key === 'e') document.getElementById("eraseBtn").click(); 
+            if (key === 'f') $("contourBtn").click(); 
+            if (key === 'b') $("drawBtn").click(); 
+            if (key === 'e') $("eraseBtn").click(); 
         });
 
         function rleEncode(a) { const r = []; if(!a || a.length===0) return r; let v = a[0], c = 1; for (let i = 1; i < a.length; i++) { if (a[i] === v) c++; else { r.push(v, c); v = a[i]; c = 1; } } r.push(v, c); return r; }
-        function cocoRleDecode(c, w, h) { const m = new Uint8Array(w * h); let v = 0, idx = 0; for (let i = 0; i < c.length; i++) { for (let r = 0; r < c[i]; r++) { const x = Math.floor(idx / h), y = idx % h; if (x < w && y < h) m[y * w + x] = v; idx++; } v = 1 - v; } return m; }
+        function rleDecode(rle, w, h) { const m = new Uint8Array(w * h); let idx = 0; for (let i = 0; i + 1 < rle.length; i += 2) { const v = rle[i], len = rle[i + 1]; if (v) m.fill(v, idx, idx + len); idx += len; } return m; }
         function resizeCanvasContainer() { const ws = document.querySelector(".workspace").getBoundingClientRect(); const s = Math.min((ws.width - 40) / state.imageWidth, (ws.height - 350) / state.imageHeight); canvasContainer.style.width = `${Math.round(state.imageWidth * s)}px`; canvasContainer.style.height = `${Math.round(state.imageHeight * s)}px`; }
-        function updateTimelineGUI(f) { document.getElementById("frameCounter").innerText = `Frame: ${f} / ${state.videoFrameCount - 1}`; }
+        function updateTimelineGUI(f) { $("frameCounter").innerText = `Frame: ${f} / ${state.videoFrameCount - 1}`; }
         function renderClassList() { classListDiv.innerHTML = ""; Object.keys(state.classes).forEach(cid => { const div = document.createElement("div"); div.className = `class-item ${state.currentClass===parseInt(cid)?'active':''}`; div.innerHTML = `<div class="color-indicator" style="background:${state.classes[cid].color}"></div><span>${state.classes[cid].name}</span>`; div.onclick = () => { state.currentClass = parseInt(cid); renderClassList(); }; classListDiv.appendChild(div); }); }
         
         function showToast(m, isError = false) { 
-            const t = document.getElementById("toast"); 
+            const t = $("toast"); 
             t.innerText = m; 
             if(isError) t.classList.add("error"); else t.classList.remove("error");
             t.classList.add("show"); 
