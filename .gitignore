@@ -1,0 +1,14 @@
+# Media & Model files
+*.mp4
+*.avi
+*.pt
+
+# Generated Data
+*_reports.json
+*_coco.json
+*.csv
+temp_voice.webm
+
+# Python & System
+__pycache__/
+*.pdf
