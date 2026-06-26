@@ -8,10 +8,8 @@ import json
 import string
 
 import cv2
-import torch
 import numpy as np
 import pandas as pd
-import whisper
 from flask import Flask, render_template, request, jsonify, send_file, Response
 
 app = Flask(__name__)
@@ -21,11 +19,23 @@ IMAGE_EXTENSIONS = ('.bmp', '.png', '.jpg', '.jpeg')
 VIDEO_EXTENSIONS = ('.mp4', '.avi', '.mkv', '.mov')
 DERIVED_MARKERS = ('_mask', '_overlay')
 
-# Whisper STT 모델은 시작 시 한 번만 로드한다.
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"\n[STT] Loading local Whisper model on [{device}]...")
-stt_model = whisper.load_model("base", device=device)
-print("[STT] Ready.\n")
+# torch / whisper 는 선택적 의존성 — 없어도 서버는 정상 실행된다.
+try:
+    import torch
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+except ImportError:
+    torch = None
+    device = "cpu"
+
+try:
+    import whisper as _whisper_mod
+    print(f"\n[STT] Loading Whisper model on [{device}]...")
+    stt_model = _whisper_mod.load_model("base", device=device)
+    print("[STT] Ready.\n")
+except Exception as e:
+    _whisper_mod = None
+    stt_model = None
+    print(f"[STT] Whisper not available ({e}). STT disabled.\n")
 
 CHECKPOINT_PATH = os.path.normpath(os.path.join(BASE_DIR, "sam2_hiera_tiny.pt"))
 CONFIG_NAME = "configs/sam2/sam2_hiera_t.yaml"
@@ -427,6 +437,8 @@ def export_reports_excel():
 
 @app.route('/api/stt', methods=['POST'])
 def native_stt_decode():
+    if stt_model is None:
+        return jsonify({"success": False, "error": "STT unavailable: Whisper not installed. Run: pip install openai-whisper soundfile"}), 503
     if 'audio' not in request.files:
         return jsonify({"success": False, "error": "Audio missing"}), 400
 
