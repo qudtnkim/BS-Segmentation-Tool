@@ -18,8 +18,11 @@ for /f "tokens=2 delims= " %%v in ('python --version 2^>^&1') do set PYVER=%%v
 echo [OK] Python %PYVER% found.
 echo.
 
-REM ---- 2. pip upgrade
-python -m pip install --upgrade pip -q >nul 2>nul
+REM ---- 2. Upgrade pip + setuptools first (prevents resolver conflicts)
+echo [INFO] Upgrading pip and setuptools...
+python -m pip install --upgrade pip setuptools wheel -q
+echo [OK] pip / setuptools / wheel
+echo.
 
 REM ---- 3. Flask
 python -c "import flask" >nul 2>nul
@@ -73,7 +76,7 @@ if %errorlevel% neq 0 (
 )
 echo [OK] PyTorch
 
-REM ---- 7. Whisper (always attempt install regardless of ffmpeg)
+REM ---- 7. Whisper
 python -c "import whisper" >nul 2>nul
 if %errorlevel% neq 0 (
     echo [INSTALL] openai-whisper + soundfile...
@@ -87,7 +90,7 @@ if %errorlevel% neq 0 (
     echo [OK] Whisper
 )
 
-REM ---- 8. ffmpeg check (needed for Whisper at runtime)
+REM ---- 8. ffmpeg
 where ffmpeg >nul 2>nul
 if %errorlevel% neq 0 (
     echo [INSTALL] ffmpeg via winget...
