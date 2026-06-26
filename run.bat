@@ -27,11 +27,19 @@ if %errorlevel% neq 0 (
     pip install pandas openpyxl
 )
 
+python -c "import cv2" >nul 2>nul
+if %errorlevel% neq 0 (
+    echo [INFO] OpenCV is missing. Installing...
+    pip install opencv-python
+)
+
 python -c "import whisper" >nul 2>nul
 if %errorlevel% neq 0 (
     echo [INFO] Whisper is missing. Installing...
     pip install openai-whisper soundfile
 )
+
+REM SAM 2(segment-anything-2)는 자동 설치 대상이 아니며, 없으면 수동 주석 모드로 동작합니다.
 
 REM 3. Open Browser
 echo [INFO] Opening browser to http://localhost:5000 ...
