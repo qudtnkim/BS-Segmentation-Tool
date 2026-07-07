@@ -105,18 +105,33 @@ if !errorlevel! equ 0 (
 )
 echo.
 
-REM ---- 4. PyTorch CPU (optional, large download; failure does not block the app)
+REM ---- 4. PyTorch (optional; uses GPU build if an NVIDIA GPU is detected, else CPU-only)
+where nvidia-smi >nul 2>nul
+set "HAS_GPU=0"
+if !errorlevel! equ 0 set "HAS_GPU=1"
+
 "%VENV_PY%" -c "import torch" >nul 2>nul
 if !errorlevel! neq 0 (
-    echo [INSTALL] PyTorch CPU... this may take a few minutes.
-    "%VENV_PY%" -m pip install torch --index-url https://download.pytorch.org/whl/cpu -q
+    if "!HAS_GPU!"=="1" (
+        echo [INSTALL] NVIDIA GPU detected - installing PyTorch with CUDA support... this may take a few minutes.
+        "%VENV_PY%" -m pip install torch -q
+    ) else (
+        echo [INSTALL] No NVIDIA GPU detected - installing PyTorch CPU build... this may take a few minutes.
+        "%VENV_PY%" -m pip install torch --index-url https://download.pytorch.org/whl/cpu -q
+    )
     if !errorlevel! neq 0 (
         echo [WARN] PyTorch install failed. GPU/AI features will be limited.
     ) else (
         echo [OK] PyTorch installed.
     )
 ) else (
-    echo [OK] PyTorch already available.
+    for /f %%g in ('"%VENV_PY%" -c "import torch;print(torch.cuda.is_available())"') do set "TORCH_CUDA_OK=%%g"
+    if "!HAS_GPU!"=="1" if /i "!TORCH_CUDA_OK!"=="False" (
+        echo [INFO] NVIDIA GPU detected but the installed PyTorch build is CPU-only - reinstalling with CUDA support...
+        "%VENV_PY%" -m pip install --force-reinstall torch -q
+        for /f %%g in ('"%VENV_PY%" -c "import torch;print(torch.cuda.is_available())"') do set "TORCH_CUDA_OK=%%g"
+    )
+    echo [OK] PyTorch already available (CUDA: !TORCH_CUDA_OK!^)
 )
 echo.
 

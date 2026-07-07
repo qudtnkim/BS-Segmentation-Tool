@@ -39,12 +39,22 @@ echo "[INFO] Installing core dependencies (Flask, OpenCV, pandas, ffmpeg)..."
 "$VENV_PY" -m pip install -r "$DIR/requirements.txt" -q
 echo "[OK] Core dependencies installed."
 
-# ---- 4. PyTorch CPU (optional)
+# ---- 4. PyTorch (optional; the default PyPI wheel bundles CUDA support on Linux
+#     and auto-detects the GPU at runtime, so no separate GPU/CPU index is needed there)
+HAS_GPU=0
+command -v nvidia-smi >/dev/null 2>&1 && HAS_GPU=1
+
 if ! "$VENV_PY" -c "import torch" >/dev/null 2>&1; then
-    echo "[INSTALL] PyTorch CPU..."
+    echo "[INSTALL] Installing PyTorch..."
     "$VENV_PY" -m pip install torch -q || echo "[WARN] PyTorch install failed. GPU/AI features will be limited."
 else
-    echo "[OK] PyTorch already available."
+    TORCH_CUDA_OK=$("$VENV_PY" -c "import torch;print(torch.cuda.is_available())" 2>/dev/null)
+    if [ "$HAS_GPU" = "1" ] && [ "$TORCH_CUDA_OK" = "False" ]; then
+        echo "[INFO] NVIDIA GPU detected but the installed PyTorch build is CPU-only - reinstalling..."
+        "$VENV_PY" -m pip install --force-reinstall torch -q
+        TORCH_CUDA_OK=$("$VENV_PY" -c "import torch;print(torch.cuda.is_available())" 2>/dev/null)
+    fi
+    echo "[OK] PyTorch already available (CUDA: $TORCH_CUDA_OK)"
 fi
 
 # ---- 5. Whisper STT (optional; ffmpeg bundled via imageio-ffmpeg)
