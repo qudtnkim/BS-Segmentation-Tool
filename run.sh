@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# BS Segmentation Tool - Setup and Launcher (macOS/Linux)
+set -e
+
+echo "==========================================================="
+echo " BS Segmentation Tool Setup and Launcher"
+echo "==========================================================="
+echo
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ---- 1. Find a working Python
+PY=""
+for candidate in python3 python; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+        PY="$candidate"
+        break
+    fi
+done
+if [ -z "$PY" ]; then
+    echo "[ERROR] Python not found. Install Python 3.10+ from https://www.python.org/"
+    exit 1
+fi
+echo "[OK] Python found: $($PY --version)"
+
+# ---- 2. Isolated virtual environment (.venv)
+VENV_DIR="$DIR/.venv"
+if [ ! -f "$VENV_DIR/bin/python" ]; then
+    echo "[INFO] Creating virtual environment in .venv ..."
+    "$PY" -m venv "$VENV_DIR"
+fi
+VENV_PY="$VENV_DIR/bin/python"
+echo "[OK] Virtual environment ready."
+
+# ---- 3. Core dependencies
+echo "[INFO] Upgrading pip..."
+"$VENV_PY" -m pip install --upgrade pip -q
+echo "[INFO] Installing core dependencies (Flask, OpenCV, pandas, ffmpeg)..."
+"$VENV_PY" -m pip install -r "$DIR/requirements.txt" -q
+echo "[OK] Core dependencies installed."
+
+# ---- 4. PyTorch CPU (optional)
+if ! "$VENV_PY" -c "import torch" >/dev/null 2>&1; then
+    echo "[INSTALL] PyTorch CPU..."
+    "$VENV_PY" -m pip install torch -q || echo "[WARN] PyTorch install failed. GPU/AI features will be limited."
+else
+    echo "[OK] PyTorch already available."
+fi
+
+# ---- 5. Whisper STT (optional; ffmpeg bundled via imageio-ffmpeg)
+if ! "$VENV_PY" -c "import whisper" >/dev/null 2>&1; then
+    echo "[INSTALL] openai-whisper for voice input..."
+    "$VENV_PY" -m pip install openai-whisper -q || echo "[WARN] Whisper install failed. STT disabled."
+else
+    echo "[OK] Whisper already available."
+fi
+
+# ---- 6. SAM 2 (optional, heavy)
+if ! "$VENV_PY" -c "from sam2.build_sam import build_sam2" >/dev/null 2>&1; then
+    echo "[INFO] SAM 2 not installed. AI-assisted mask propagation disabled."
+    echo "  Optional manual install: \"$VENV_PY\" -m pip install \"git+https://github.com/facebookresearch/sam2.git\""
+else
+    echo "[OK] SAM 2 available."
+fi
+
+echo
+echo "==========================================================="
+echo " All checks done. Starting server..."
+echo "==========================================================="
+(sleep 1 && (command -v open >/dev/null 2>&1 && open http://localhost:5000 || command -v xdg-open >/dev/null 2>&1 && xdg-open http://localhost:5000)) &
+"$VENV_PY" "$DIR/app.py"
