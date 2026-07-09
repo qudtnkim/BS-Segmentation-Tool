@@ -21,32 +21,84 @@ echo  BS Segmentation Tool Setup and Launcher  (Administrator)
 echo ===========================================================
 echo.
 
-REM ---- 1. Find Python
+REM ---- 1. Pick a Python (prefer 3.12, then 3.11, then 3.10, warn on 3.13+)
 set "PY="
-where python >nul 2>nul
+set "PY_VER_MAJOR=0"
+set "PY_VER_MINOR=0"
+
+REM Try py launcher with specific versions first
+where py >nul 2>nul
 if !errorlevel! equ 0 (
-    python --version >nul 2>nul
-    if !errorlevel! equ 0 set "PY=python"
+    for %%V in (3.12 3.11 3.10) do (
+        if not defined PY (
+            py -%%V --version >nul 2>nul
+            if !errorlevel! equ 0 (
+                set "PY=py -%%V"
+                echo [OK] Using Python %%V via py launcher.
+            )
+        )
+    )
 )
+
+REM Fallback: default python on PATH
+if not defined PY (
+    where python >nul 2>nul
+    if !errorlevel! equ 0 (
+        python --version >nul 2>nul
+        if !errorlevel! equ 0 set "PY=python"
+    )
+)
+
+REM Last resort: default py launcher (whatever version)
 if not defined PY (
     where py >nul 2>nul
     if !errorlevel! equ 0 set "PY=py -3"
 )
+
 if not defined PY (
     echo [ERROR] Python not found in PATH.
-    echo   Install Python 3.10+ from https://www.python.org/
+    echo   Install Python 3.10-3.12 from https://www.python.org/
     echo   Check 'Add python.exe to PATH' during install.
     pause
     exit /b 1
 )
-for /f "tokens=2 delims= " %%v in ('%PY% --version 2^>^&1') do set PYVER=%%v
+
+REM Detect version for warning
+for /f "tokens=2 delims= " %%v in ('%PY% --version 2^>^&1') do set "PYVER=%%v"
+for /f "tokens=1,2 delims=." %%a in ("%PYVER%") do (
+    set "PY_VER_MAJOR=%%a"
+    set "PY_VER_MINOR=%%b"
+)
 echo [OK] Python %PYVER% found (using: %PY%).
+
+REM Warn on Python 3.13+ (numpy/torch wheels may be missing)
+if !PY_VER_MAJOR! equ 3 if !PY_VER_MINOR! geq 13 (
+    echo.
+    echo [WARN] Python !PYVER! detected. Some packages numpy, torch may not have
+    echo   prebuilt wheels for 3.13+ and require slow source builds that can fail.
+    echo   For best results, install Python 3.12 from https://www.python.org/
+    echo.
+)
 echo.
 
-REM ---- 2. Virtual environment
-set "VENV_DIR=%~dp0.venv"
+REM ---- 2. Virtual environment in a fixed, ASCII-only user location
+REM     This avoids issues with non-ASCII characters in the project path.
+set "VENV_DIR=%USERPROFILE%\.bs_tool\venv"
+echo [INFO] Virtual environment location: %VENV_DIR%
+
+REM Verify the venv path itself is ASCII (USERPROFILE could contain non-ASCII)
+echo %VENV_DIR%| findstr /R "[^ -~]" >nul
+if !errorlevel! equ 0 (
+    echo [WARN] Your user profile path contains non-ASCII characters:
+    echo   %USERPROFILE%
+    echo   Falling back to C:\bs_tool_venv instead.
+    set "VENV_DIR=C:\bs_tool_venv"
+    echo [INFO] New virtual environment location: !VENV_DIR!
+)
+
 if not exist "%VENV_DIR%\Scripts\python.exe" (
-    echo [INFO] Creating virtual environment in .venv ...
+    echo [INFO] Creating virtual environment ...
+    if not exist "%VENV_DIR%\.." mkdir "%VENV_DIR%\.." 2>nul
     %PY% -m venv "%VENV_DIR%"
     if !errorlevel! neq 0 (
         echo [ERROR] Virtual environment creation failed.
@@ -55,17 +107,27 @@ if not exist "%VENV_DIR%\Scripts\python.exe" (
     )
 )
 set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
-echo [OK] Virtual environment ready.
+echo [OK] Virtual environment ready at %VENV_DIR%.
 echo.
 
-REM ---- 3. Core dependencies
+REM ---- 3. Core dependencies (wheel-only to avoid source builds)
 echo [INFO] Upgrading pip and pinning setuptools for torch compatibility...
 "%VENV_PY%" -m pip install --upgrade pip -q
 "%VENV_PY%" -m pip install "setuptools<82" wheel -q
-echo [INFO] Installing core dependencies...
-"%VENV_PY%" -m pip install -r "%~dp0requirements.txt" -q
-if !errorlevel! neq 0 (
-    echo [ERROR] Core dependency install failed. Check your internet connection.
+echo [INFO] Installing core dependencies (binary wheels only)...
+"%VENV_PY%" -m pip install --only-binary=:all: -r "%~dp0requirements.txt" -q
+set "CORE_ERR=!errorlevel!"
+if !CORE_ERR! neq 0 (
+    echo [WARN] Wheel-only install failed. Retrying with source builds allowed...
+    "%VENV_PY%" -m pip install -r "%~dp0requirements.txt" -q
+    set "CORE_ERR=!errorlevel!"
+)
+if !CORE_ERR! neq 0 (
+    echo.
+    echo [ERROR] Core dependency install failed.
+    echo   Likely causes:
+    echo     1. Python !PYVER! has no prebuilt wheel for some package - install Python 3.12 instead.
+    echo     2. No internet connection.
     pause
     exit /b 1
 )
