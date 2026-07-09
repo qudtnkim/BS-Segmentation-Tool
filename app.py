@@ -423,25 +423,7 @@ def save_reports():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-@app.route('/api/export_reports_excel', methods=['POST'])
-def export_reports_excel():
-    data = request.json or {}
-    reports = data.get('reports', {})
-    fps = float(data.get('fps', 30.0)) or 30.0
-    excel_path = annotation_path(data, "_diagnostic_report.xlsx", "image_diagnostic_report.xlsx")
-    try:
-        rows = []
-        for frame_idx, text in sorted(reports.items(), key=lambda x: int(x[0])):
-            seconds = int(frame_idx) / fps
-            rows.append({
-                "Frame Index": int(frame_idx),
-                "Timestamp": f"{int(seconds // 60):02d}:{seconds % 60:05.2f}",
-                "Report Description": text,
-            })
-        pd.DataFrame(rows).to_excel(excel_path, index=False, engine='openpyxl')
-        return jsonify({"success": True, "path": excel_path})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+
 
 
 @app.route('/api/stt', methods=['POST'])
@@ -544,6 +526,59 @@ def sam_refine():
             refined_box = [int(xs.min()), int(ys.min()),
                            int(xs.max() - xs.min()), int(ys.max() - ys.min())]
         return jsonify({"success": True, "rle": rle_encode(mask_binary), "refined_box": refined_box})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/load_classes', methods=['POST'])
+def load_classes():
+    data = request.json or {}
+    path = os.path.join(data.get('directory', ''), 'classes.json')
+    classes = load_json(path)
+    return jsonify({"success": True, "classes": classes})
+
+
+@app.route('/api/save_classes', methods=['POST'])
+def save_classes():
+    data = request.json or {}
+    path = os.path.join(data.get('directory', ''), 'classes.json')
+    try:
+        dump_json(path, data.get('classes', {}))
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/export_reports_excel', methods=['POST'])
+def export_reports_excel_v2():
+    """operator별 컬럼을 나눠서 Excel로 내보낸다."""
+    data = request.json or {}
+    # reports 구조: { "op1_name": {"frame": "text", ...}, ... }  또는 레거시 flat {"frame": "text"}
+    reports = data.get('reports', {})
+    fps = float(data.get('fps', 30.0)) or 30.0
+    excel_path = annotation_path(data, "_diagnostic_report.xlsx", "image_diagnostic_report.xlsx")
+    try:
+        # 레거시(flat) 포맷 감지
+        first_val = next(iter(reports.values()), None) if reports else None
+        if isinstance(first_val, str):
+            operators = {"Operator": reports}
+        else:
+            operators = reports  # { op_name: {frame: text} }
+
+        all_frames = sorted({int(f) for op_data in operators.values() for f in op_data}, key=int)
+        rows = []
+        for frame_idx in all_frames:
+            seconds = frame_idx / fps
+            row = {
+                "Frame Index": frame_idx,
+                "Timestamp": f"{int(seconds // 60):02d}:{seconds % 60:05.2f}",
+            }
+            for op_name, op_data in operators.items():
+                row[op_name] = op_data.get(str(frame_idx), "")
+            rows.append(row)
+
+        pd.DataFrame(rows).to_excel(excel_path, index=False, engine='openpyxl')
+        return jsonify({"success": True, "path": excel_path})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 

@@ -85,6 +85,16 @@
         .loading-spinner { width: 60px; height: 60px; border: 6px solid rgba(255,255,255,0.1); border-top-color: var(--accent-color); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
         .loading-text { font-size: 18px; font-weight: 500; letter-spacing: 0.5px; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
+        .operator-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+        .operator-select { background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px; outline: none; min-width: 120px; }
+        .class-item { gap: 6px; }
+        .class-drag-handle { cursor: grab; color: var(--text-sub); font-size: 14px; padding: 0 2px; user-select: none; }
+        .class-del-btn { margin-left: auto; background: transparent; border: none; color: var(--danger-color); cursor: pointer; font-size: 14px; padding: 0 2px; }
+        .class-add-row { display: flex; gap: 6px; margin-top: 8px; }
+        .class-add-input { flex: 1; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 8px; color: #fff; font-size: 12px; outline: none; }
+        .class-color-input { width: 34px; height: 30px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); cursor: pointer; padding: 2px; }
+        .step-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+        .step-input { width: 56px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 8px; color: #fff; font-size: 12px; outline: none; text-align: center; }
     </style>
 </head>
 <body>
@@ -118,12 +128,18 @@
             </div>
 
             <div class="diagnostic-report-panel">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:6px;">
                     <span style="font-size: 13px; font-weight:600; color: #a5b4fc;">📝 Frame Description / Clinical Log</span>
                     <button class="btn btn-sm" id="exportExcelBtn" style="padding:6px 12px; font-size:12px; background:#10b981; border-radius:4px;">📊 Export Excel</button>
                 </div>
+                <div class="operator-row">
+                    <select class="operator-select" id="operatorSelect"></select>
+                    <button class="btn btn-sec" id="addOperatorBtn" style="padding:5px 10px; font-size:12px;">＋ Add Operator</button>
+                    <button class="btn btn-sec" id="renameOperatorBtn" style="padding:5px 10px; font-size:12px;">✏️ Rename</button>
+                    <button class="btn btn-sec" id="delOperatorBtn" style="padding:5px 10px; font-size:12px; border-color:var(--danger-color); color:var(--danger-color);">🗑 Del</button>
+                </div>
                 <div class="report-textarea-container">
-                    <textarea class="report-textarea" id="frameReportTextarea" placeholder="해당 프레임의 소견을 적어주세요. 마이크를 눌러 음성 인식을 사용할 수도 있습니다."></textarea>
+                    <textarea class="report-textarea" id="frameReportTextarea" placeholder="Select an operator above, then type the description for this frame."></textarea>
                     <button class="stt-record-btn" id="sttRecordBtn">🎙️</button>
                 </div>
             </div>
@@ -134,6 +150,11 @@
                     <div class="timeline-controls">
                         <button class="btn btn-sm" id="playPauseBtn" style="width: 80px;">▶ Play</button>
                         <button class="btn btn-sm btn-sec" id="timelinePrevBtn">◀ Prev (A)</button>
+                        <div class="step-row">
+                            <span>Step</span>
+                            <input type="number" class="step-input" id="frameStepInput" value="1" min="1" max="9999" title="Frames to skip per Prev/Next">
+                            <span>frames</span>
+                        </div>
                         <button class="btn btn-sm btn-sec" id="timelineNextBtn">Next (D) ▶</button>
                         <span id="frameCounter">Frame: 0 / 0</span>
                         <span id="timeCounter">Time: 00:00 / 00:00</span>
@@ -213,7 +234,12 @@
 
         <div class="control-panel">
             <div class="panel-section-title" style="font-size: 14px; color: var(--text-sub); font-weight: 600; text-transform: uppercase;">Annotation Classes</div>
-            <div class="class-selector-list" id="classList"></div>
+            <div class="class-selector-list" id="classList" id="classList"></div>
+            <div class="class-add-row">
+                <input type="color" class="class-color-input" id="newClassColor" value="#ffffff">
+                <input type="text" class="class-add-input" id="newClassName" placeholder="New class name...">
+                <button class="btn" id="addClassBtn" style="padding:5px 10px; font-size:12px;">＋</button>
+            </div>
             
             <div class="panel-section-title" style="font-size: 14px; color: var(--text-sub); font-weight: 600; text-transform: uppercase; margin-top: 10px;">Tools & Matrix</div>
             <div class="tool-options">
@@ -261,118 +287,151 @@
             return res.json();
         }
 
-        const defaultClasses = {
-            0: { name: "grasping retractor", color: "#e6194b" }, 1: { name: "cadiere forceps", color: "#3cb44b" },
-            2: { name: "bipolar forceps", color: "#ffe119" }, 3: { name: "force bipolar", color: "#4363d8" },
-            4: { name: "clip applier", color: "#f58231" }, 5: { name: "stapler", color: "#911eb4" },
-            6: { name: "permanent cautery hook spatula", color: "#46f0f0" }, 7: { name: "monopolar curved scissor", color: "#f032e6" },
-            8: { name: "vessel sealer", color: "#bcf60c" }, 9: { name: "tip up fenestrated grasper", color: "#fabebe" },
-            10: { name: "bipolar dissector", color: "#008080" }, 11: { name: "needle driver", color: "#e6beff" },
-            12: { name: "prograsp forceps", color: "#9a6324" }, 13: { name: "suction irrigator", color: "#fffac8" }
+        // ── 기본 클래스 정의 ─────────────────────────────────────────────
+        const builtinClasses = {
+            0: { name: "grasping retractor",            color: "#e6194b" },
+            1: { name: "cadiere forceps",               color: "#3cb44b" },
+            2: { name: "bipolar forceps",               color: "#ffe119" },
+            3: { name: "force bipolar",                 color: "#4363d8" },
+            4: { name: "clip applier",                  color: "#f58231" },
+            5: { name: "stapler",                       color: "#911eb4" },
+            6: { name: "permanent cautery hook spatula",color: "#46f0f0" },
+            7: { name: "monopolar curved scissor",      color: "#f032e6" },
+            8: { name: "vessel sealer",                 color: "#bcf60c" },
+            9: { name: "tip up fenestrated grasper",    color: "#fabebe" },
+            10:{ name: "bipolar dissector",             color: "#008080" },
+            11:{ name: "needle driver",                 color: "#e6beff" },
+            12:{ name: "prograsp forceps",              color: "#9a6324" },
+            13:{ name: "suction irrigator",             color: "#fffac8" }
         };
 
-        function hexToRgb(h) { const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h); return r ? { r: parseInt(r[1], 16), g: parseInt(r[2], 16), b: parseInt(r[3], 16) } : { r: 255, g: 255, b: 255 }; }
-        Object.keys(defaultClasses).forEach(cid => { defaultClasses[cid].rgb = hexToRgb(defaultClasses[cid].color); });
+        function hexToRgb(h) {
+            const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);
+            return r ? { r: parseInt(r[1],16), g: parseInt(r[2],16), b: parseInt(r[3],16) } : {r:255,g:255,b:255};
+        }
+        function withRgb(classes) {
+            const out = {};
+            Object.keys(classes).forEach(cid => {
+                out[cid] = { ...classes[cid], rgb: hexToRgb(classes[cid].color) };
+            });
+            return out;
+        }
 
         let state = {
             directory: "", images: [], videos: [], mediaType: "image", currentIndex: -1,
-            brushSize: 15, opacity: 0.4, currentClass: 0, 
-            isDrawing: false, isEraser: false, isBboxMode: false, isContourMode: false, isBucketMode: false,
+            brushSize: 15, opacity: 0.4, currentClass: 0,
+            isDrawing: false, isEraser: false, isBboxMode: false, isContourMode: false,
             contourPoints: [], isDrawingContour: false,
             imageLoaded: false, imageWidth: 0, imageHeight: 0, layers: {}, frameAnnotations: {},
             videoFps: 30, videoFrameCount: 0, videoDuration: 0, videoPlayMode: "native", currentFrameIndexFE: 0,
-            reports: {}, classes: JSON.parse(JSON.stringify(defaultClasses)), 
+            // reports: { operatorName: { frameIdx: "text" } }
+            reports: {},
+            // operators: [ { name: "Operator 1" }, ... ]
+            operators: [{ name: "Operator 1" }],
+            currentOperator: "Operator 1",
+            classes: withRgb(JSON.parse(JSON.stringify(builtinClasses))),
+            classOrder: Object.keys(builtinClasses).map(Number), // 순서 배열
             bboxStart: null, bboxCurrent: null, isDrawingBbox: false,
             tasksList: [], toolsList: [], csvModified: false, timelineStart: null, timelineEnd: null,
-            undoStack: [] // 실행 취소(Ctrl+Z) 히스토리 저장 배열 추가
+            undoStack: []
         };
 
-        const MAX_UNDO_HISTORY = 20; // 최대 되돌리기 횟수
-
+        const MAX_UNDO_HISTORY = 20;
         let activeReportFrame = -1;
-        let isRedrawing = false; 
-        let lastMousePos = null; 
-        let browserMode = 'folder';
+        let isRedrawing = false;
+        let lastMousePos = null;
+        let browserMode = "folder";
+        let dragSrcIdx = null; // class drag-and-drop
 
         let mediaRecorder = null; let audioChunks = [];
-        const videoPlayer = $("videoPlayer");
-        const imageCanvas = $("imageCanvas");
-        const maskCanvas = $("maskCanvas");
-        const bboxCanvas = $("bboxCanvas");
+        const videoPlayer    = $("videoPlayer");
+        const imageCanvas    = $("imageCanvas");
+        const maskCanvas     = $("maskCanvas");
+        const bboxCanvas     = $("bboxCanvas");
         const canvasContainer = $("canvasContainer");
         const frameReportTextarea = $("frameReportTextarea");
-        const classListDiv = $("classList");
+        const classListDiv   = $("classList");
         const timelineSlider = $("timelineSlider");
-
-        const imgCtx = imageCanvas.getContext("2d");
+        const imgCtx  = imageCanvas.getContext("2d");
         const maskCtx = maskCanvas.getContext("2d", { willReadFrequently: true });
         const bboxCtx = bboxCanvas.getContext("2d");
 
         function showLoading(msg) { $("loadingText").innerText = msg || "처리 중입니다..."; $("loadingOverlay").style.display = "flex"; }
-        function hideLoading() { $("loadingOverlay").style.display = "none"; }
+        function hideLoading()    { $("loadingOverlay").style.display = "none"; }
+        function getStep()        { return Math.max(1, parseInt($("frameStepInput").value) || 1); }
 
-        // ======== Folder / File Browser Logic ========
-        $("selectDirBtn").onclick = () => { browserMode = 'folder'; $("browserModalTitle").innerText = "📂 Select Folder"; $("folderBrowserModal").classList.add("show"); browseTo(""); };
-        $("selectVideoBtn").onclick = () => { browserMode = 'file'; $("browserModalTitle").innerText = "🎞️ Select a Video File"; $("folderBrowserModal").classList.add("show"); browseTo(""); };
-        
-        $("cancelBrowserBtn").onclick = () => $("folderBrowserModal").classList.remove("show");
+        // ── 폴더/파일 브라우저 ───────────────────────────────────────────
+        $("selectDirBtn").onclick  = () => { browserMode = "folder"; $("browserModalTitle").innerText = "📂 Select Folder"; $("folderBrowserModal").classList.add("show"); browseTo(""); };
+        $("selectVideoBtn").onclick= () => { browserMode = "file";   $("browserModalTitle").innerText = "🎞️ Select a Video File"; $("folderBrowserModal").classList.add("show"); browseTo(""); };
+        $("cancelBrowserBtn").onclick  = () => $("folderBrowserModal").classList.remove("show");
         $("confirmBrowserBtn").onclick = () => { $("directoryInput").value = $("browserPathInput").value; loadFolder(); $("folderBrowserModal").classList.remove("show"); };
-        $("browserUpBtn").onclick = () => { let p = $("browserPathInput").value; browseTo(p.substring(0, p.lastIndexOf(p.includes("\\")?'\\':'/'))); };
-        $("browserGoBtn").onclick = () => browseTo($("browserPathInput").value);
-        $("loadDirBtn").onclick = loadFolder;
+        $("browserUpBtn").onclick  = () => { const p = $("browserPathInput").value; browseTo(p.substring(0, p.lastIndexOf(p.includes("\\") ? "\\" : "/"))); };
+        $("browserGoBtn").onclick  = () => browseTo($("browserPathInput").value);
+        $("loadDirBtn").onclick    = loadFolder;
 
         async function browseTo(path) {
             const res = await postJSON("/api/browse_directory", { path });
-            if (res.success) {
-                $("browserPathInput").value = res.current_path;
-                $("browserList").innerHTML = "";
-                res.directories.forEach(d => {
-                    const item = document.createElement("div"); item.className = "browser-item"; item.innerText = `📁 ${d}`;
-                    item.onclick = () => browseTo(res.current_path + (res.current_path.includes("\\")?"\\":"/") + d);
-                    $("browserList").appendChild(item);
-                });
-                res.files.forEach(f => {
-                    const item = document.createElement("div"); item.className = "browser-item"; item.innerText = `📄 ${f.name}`;
-                    if (browserMode === 'file' && f.is_media) {
-                        item.style.color = "var(--accent-color)";
-                        item.onclick = () => { $("browserPathInput").value = res.current_path + (res.current_path.includes("\\")?"\\":"/") + f.name; };
-                    } else if (browserMode === 'folder') {
-                        item.style.color = "var(--text-sub)"; item.style.cursor = "not-allowed";
-                    }
-                    $("browserList").appendChild(item);
-                });
-            }
+            if (!res.success) return;
+            $("browserPathInput").value = res.current_path;
+            $("browserList").innerHTML = "";
+            res.directories.forEach(d => {
+                const item = document.createElement("div"); item.className = "browser-item"; item.innerText = `📁 ${d}`;
+                item.onclick = () => browseTo(res.current_path + (res.current_path.includes("\\") ? "\\" : "/") + d);
+                $("browserList").appendChild(item);
+            });
+            res.files.forEach(f => {
+                const item = document.createElement("div"); item.className = "browser-item"; item.innerText = `📄 ${f.name}`;
+                if (browserMode === "file" && f.is_media) {
+                    item.style.color = "var(--accent-color)";
+                    item.onclick = () => { $("browserPathInput").value = res.current_path + (res.current_path.includes("\\") ? "\\" : "/") + f.name; };
+                } else { item.style.color = "var(--text-sub)"; item.style.cursor = "not-allowed"; }
+                $("browserList").appendChild(item);
+            });
         }
 
         async function loadFolder() {
             const res = await postJSON("/api/load_directory", { directory: $("directoryInput").value });
-            if (res.success) {
-                state.directory = res.directory; state.images = res.images; state.videos = res.videos;
-                renderFileList();
-                if (res.videos.length > 0) selectFile(0, "video");
-                else if (res.images.length > 0) selectFile(0, "image");
-            } else { showToast(res.error, true); }
+            if (!res.success) { showToast(res.error, true); return; }
+            state.directory = res.directory; state.images = res.images; state.videos = res.videos;
+            // 폴더별 classes.json 로드 (없으면 builtin 유지)
+            const clsRes = await postJSON("/api/load_classes", { directory: state.directory });
+            if (clsRes.success && clsRes.classes) {
+                const loaded = clsRes.classes;
+                state.classes = withRgb(loaded.classes || loaded);
+                state.classOrder = (loaded.order || Object.keys(state.classes).map(Number)).map(Number);
+            }
+            renderFileList();
+            if (res.videos.length > 0) selectFile(0, "video");
+            else if (res.images.length > 0) selectFile(0, "image");
+            renderClassList();
         }
 
         function renderFileList() {
             $("imageList").innerHTML = "";
             state.videos.forEach((v, i) => {
-                const div = document.createElement("div"); div.className = `image-item ${state.mediaType==='video'&&state.currentIndex===i?'active':''}`;
+                const div = document.createElement("div"); div.className = `image-item ${state.mediaType==="video"&&state.currentIndex===i?"active":""}`;
                 div.innerText = `🎥 ${v}`; div.onclick = () => selectFile(i, "video"); $("imageList").appendChild(div);
             });
             state.images.forEach((img, i) => {
-                const div = document.createElement("div"); div.className = `image-item ${state.mediaType==='image'&&state.currentIndex===i?'active':''}`;
+                const div = document.createElement("div"); div.className = `image-item ${state.mediaType==="image"&&state.currentIndex===i?"active":""}`;
                 div.innerText = `🖼️ ${img}`; div.onclick = () => selectFile(i, "image"); $("imageList").appendChild(div);
             });
         }
 
         async function selectFile(idx, type) {
             state.mediaType = type; state.currentIndex = idx;
-            state.undoStack = []; // 파일 변경 시 히스토리 초기화
+            state.undoStack = [];
             renderFileList();
-            
+
             const repRes = await postJSON("/api/load_reports", { directory: state.directory, video_name: type === "video" ? state.videos[idx] : "" });
-            state.reports = repRes.reports || {};
+            // 레거시 flat 포맷 → 첫 operator로 마이그레이션
+            const loaded = repRes.reports || {};
+            if (loaded && typeof Object.values(loaded)[0] === "string") {
+                state.reports = { [state.operators[0].name]: loaded };
+            } else {
+                state.reports = loaded;
+            }
+            renderOperatorUI();
 
             await loadCsvRecords();
 
@@ -380,7 +439,7 @@
                 const vName = state.videos[idx];
                 state.videoPlayMode = vName.toLowerCase().endsWith(".mp4") ? "native" : "frame_extraction";
                 imageCanvas.style.display = state.videoPlayMode === "native" ? "none" : "block";
-                videoPlayer.style.display = state.videoPlayMode === "native" ? "block" : "none";
+                videoPlayer.style.display  = state.videoPlayMode === "native" ? "block" : "none";
 
                 const info = await postJSON("/api/video_info", { directory: state.directory, video_name: vName });
                 if (info.success) {
@@ -389,7 +448,7 @@
                     [imageCanvas, maskCanvas, bboxCanvas].forEach(c => { c.width = info.width; c.height = info.height; });
                     state.imageLoaded = true; resizeCanvasContainer();
                     state.frameAnnotations = {};
-                    
+
                     const cocoRes = await postJSON("/api/get_coco_annotations", { directory: state.directory, video_name: vName });
                     if (cocoRes.success && cocoRes.has_annotations) {
                         cocoRes.coco_data.annotations.forEach(ann => {
@@ -407,7 +466,7 @@
 
                     timelineSlider.max = state.videoFrameCount - 1; timelineSlider.value = 0;
                     if (state.videoPlayMode === "native") {
-                        videoPlayer.src = `/api/get_video?path=${encodeURIComponent(state.directory + '/' + vName)}`;
+                        videoPlayer.src = `/api/get_video?path=${encodeURIComponent(state.directory + "/" + vName)}`;
                         videoPlayer.load();
                     } else {
                         state.currentFrameIndexFE = 0; seekToFrame(0);
@@ -417,15 +476,15 @@
             } else {
                 videoPlayer.style.display = "none"; imageCanvas.style.display = "block";
                 const imgName = state.images[idx];
-                const imgObj = new Image(); imgObj.src = `/api/get_image?path=${encodeURIComponent(state.directory + '/' + imgName)}`;
+                const imgObj = new Image(); imgObj.src = `/api/get_image?path=${encodeURIComponent(state.directory + "/" + imgName)}`;
                 imgObj.onload = async function() {
                     state.imageWidth = imgObj.width; state.imageHeight = imgObj.height;
                     [imageCanvas, maskCanvas, bboxCanvas].forEach(c => { c.width = imgObj.width; c.height = imgObj.height; });
                     state.imageLoaded = true; resizeCanvasContainer();
                     imgCtx.drawImage(imgObj, 0, 0);
                     state.layers = {};
-                    Object.keys(state.classes).forEach(cid => { state.layers[cid] = new Uint8Array(imgObj.width * imgObj.height); });
-                    
+                    state.classOrder.forEach(cid => { state.layers[cid] = new Uint8Array(imgObj.width * imgObj.height); });
+
                     const maskRes = await postJSON("/api/get_mask", { directory: state.directory, image_name: imgName });
                     if (maskRes.success && maskRes.has_mask) {
                         Object.keys(maskRes.mask_data.class_layers).forEach(cid => {
@@ -438,7 +497,165 @@
             renderClassList();
         }
 
-        // ======== CSV Data Management ========
+        // ── Operator 관리 ────────────────────────────────────────────────
+        function renderOperatorUI() {
+            const sel = $("operatorSelect");
+            sel.innerHTML = "";
+            state.operators.forEach(op => {
+                const opt = document.createElement("option");
+                opt.value = opt.innerText = op.name;
+                if (op.name === state.currentOperator) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        }
+
+        $("operatorSelect").onchange = function() {
+            saveCurrentFrameReport(activeReportFrame);
+            state.currentOperator = this.value;
+            loadFrameReport(activeReportFrame);
+        };
+
+        $("addOperatorBtn").onclick = () => {
+            const name = prompt("New operator name:", `Operator ${state.operators.length + 1}`);
+            if (!name || !name.trim()) return;
+            const trimmed = name.trim();
+            if (state.operators.some(o => o.name === trimmed)) { showToast("Name already exists", true); return; }
+            state.operators.push({ name: trimmed });
+            state.currentOperator = trimmed;
+            renderOperatorUI();
+            loadFrameReport(activeReportFrame);
+        };
+
+        $("renameOperatorBtn").onclick = () => {
+            const oldName = state.currentOperator;
+            const newName = prompt("Rename operator:", oldName);
+            if (!newName || !newName.trim() || newName.trim() === oldName) return;
+            const trimmed = newName.trim();
+            if (state.operators.some(o => o.name === trimmed)) { showToast("Name already exists", true); return; }
+            // 이름 변경: reports 키 이전
+            if (state.reports[oldName]) { state.reports[trimmed] = state.reports[oldName]; delete state.reports[oldName]; }
+            state.operators.find(o => o.name === oldName).name = trimmed;
+            state.currentOperator = trimmed;
+            renderOperatorUI();
+        };
+
+        $("delOperatorBtn").onclick = () => {
+            if (state.operators.length <= 1) { showToast("At least one operator required", true); return; }
+            if (!confirm(`Delete operator "${state.currentOperator}"? All their annotations will be lost.`)) return;
+            delete state.reports[state.currentOperator];
+            state.operators = state.operators.filter(o => o.name !== state.currentOperator);
+            state.currentOperator = state.operators[0].name;
+            renderOperatorUI();
+            loadFrameReport(activeReportFrame);
+        };
+
+        // ── Reports (per operator) ────────────────────────────────────────
+        function loadFrameReport(fIdx) {
+            activeReportFrame = fIdx;
+            const opData = state.reports[state.currentOperator] || {};
+            frameReportTextarea.value = opData[String(fIdx)] || "";
+        }
+
+        function saveCurrentFrameReport(fIdx) {
+            if (fIdx === -1) return;
+            const val = frameReportTextarea.value.trim();
+            if (!state.reports[state.currentOperator]) state.reports[state.currentOperator] = {};
+            if (val) state.reports[state.currentOperator][String(fIdx)] = val;
+            else delete state.reports[state.currentOperator][String(fIdx)];
+            postJSON("/api/save_reports", {
+                directory: state.directory,
+                video_name: state.mediaType === "video" ? state.videos[state.currentIndex] : "",
+                reports: state.reports
+            });
+        }
+
+        frameReportTextarea.oninput = (e) => {
+            if (activeReportFrame === -1) return;
+            if (!state.reports[state.currentOperator]) state.reports[state.currentOperator] = {};
+            state.reports[state.currentOperator][String(activeReportFrame)] = e.target.value;
+        };
+
+        $("exportExcelBtn").onclick = async () => {
+            saveCurrentFrameReport(activeReportFrame);
+            const res = await postJSON("/api/export_reports_excel", {
+                directory: state.directory,
+                video_name: state.mediaType === "video" ? state.videos[state.currentIndex] : "",
+                reports: state.reports,
+                fps: state.videoFps
+            });
+            if (res.success) alert(`Excel compiled successfully:\n${res.path}`);
+            else showToast(res.error || "Export failed", true);
+        };
+
+        // ── Class 관리 ───────────────────────────────────────────────────
+        function saveClassesToServer() {
+            if (!state.directory) return;
+            const plain = {};
+            Object.keys(state.classes).forEach(cid => {
+                plain[cid] = { name: state.classes[cid].name, color: state.classes[cid].color };
+            });
+            postJSON("/api/save_classes", { directory: state.directory, classes: { classes: plain, order: state.classOrder } });
+        }
+
+        function renderClassList() {
+            classListDiv.innerHTML = "";
+            state.classOrder.forEach((cidNum, orderIdx) => {
+                const cid = String(cidNum);
+                if (!state.classes[cid]) return;
+                const div = document.createElement("div");
+                div.className = `class-item ${state.currentClass === cidNum ? "active" : ""}`;
+                div.draggable = true;
+                div.dataset.orderIdx = orderIdx;
+
+                div.innerHTML = `
+                    <span class="class-drag-handle" title="Drag to reorder">⠿</span>
+                    <div class="color-indicator" style="background:${state.classes[cid].color}"></div>
+                    <span style="flex:1; font-size:13px;">${state.classes[cid].name}</span>
+                    <button class="class-del-btn" title="Delete class">✕</button>`;
+
+                div.querySelector(".class-del-btn").onclick = (e) => {
+                    e.stopPropagation();
+                    if (!confirm(`Delete class "${state.classes[cid].name}"?`)) return;
+                    delete state.classes[cid];
+                    state.classOrder = state.classOrder.filter(c => c !== cidNum);
+                    if (state.currentClass === cidNum) state.currentClass = state.classOrder[0] ?? 0;
+                    saveClassesToServer();
+                    renderClassList(); scheduleRedraw();
+                };
+
+                // drag-and-drop 순서 변경
+                div.ondragstart = (e) => { dragSrcIdx = orderIdx; e.dataTransfer.effectAllowed = "move"; };
+                div.ondragover  = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; };
+                div.ondrop      = (e) => {
+                    e.preventDefault();
+                    if (dragSrcIdx === null || dragSrcIdx === orderIdx) return;
+                    const moved = state.classOrder.splice(dragSrcIdx, 1)[0];
+                    state.classOrder.splice(orderIdx, 0, moved);
+                    dragSrcIdx = null;
+                    saveClassesToServer();
+                    renderClassList(); scheduleRedraw();
+                };
+
+                div.onclick = () => { state.currentClass = cidNum; renderClassList(); };
+                classListDiv.appendChild(div);
+            });
+        }
+
+        // 새 클래스 추가
+        $("addClassBtn").onclick = () => {
+            const name = $("newClassName").value.trim();
+            const color = $("newClassColor").value;
+            if (!name) { showToast("Enter a class name first", true); return; }
+            const newId = (Math.max(-1, ...Object.keys(state.classes).map(Number)) + 1);
+            state.classes[newId] = { name, color, rgb: hexToRgb(color) };
+            state.classOrder.push(newId);
+            $("newClassName").value = "";
+            saveClassesToServer();
+            renderClassList();
+            showToast(`Class "${name}" added`);
+        };
+
+        // ── CSV 관리 ─────────────────────────────────────────────────────
         async function loadCsvRecords() {
             if (!state.directory) return;
             const vidName = state.mediaType === "video" ? state.videos[state.currentIndex] : "";
@@ -447,9 +664,7 @@
                 state.tasksList = res.success ? (res.tasks || []) : [];
                 state.toolsList = res.success ? (res.tools || []) : [];
                 renderCsvTables(); setCsvModified(false);
-            } catch (e) {
-                state.tasksList = []; state.toolsList = []; renderCsvTables();
-            }
+            } catch(e) { state.tasksList = []; state.toolsList = []; renderCsvTables(); }
         }
 
         function renderCsvTables() {
@@ -457,16 +672,15 @@
             tasksTbody.innerHTML = "";
             state.tasksList.forEach((rec, idx) => {
                 const tr = document.createElement("tr");
-                tr.innerHTML = `<td>${rec.index}</td><td>${rec.start_part||'1'}</td><td>${parseFloat(rec.start_time).toFixed(3)}</td><td>${rec.stop_part||'1'}</td><td>${parseFloat(rec.stop_time).toFixed(3)}</td><td>${rec.groundtruth_taskname}</td><td><button class="csv-btn-del" data-idx="${idx}">Del</button></td>`;
+                tr.innerHTML = `<td>${rec.index}</td><td>${rec.start_part||"1"}</td><td>${parseFloat(rec.start_time).toFixed(3)}</td><td>${rec.stop_part||"1"}</td><td>${parseFloat(rec.stop_time).toFixed(3)}</td><td>${rec.groundtruth_taskname}</td><td><button class="csv-btn-del" data-idx="${idx}">Del</button></td>`;
                 tr.querySelector(".csv-btn-del").onclick = () => { state.tasksList.splice(idx, 1); renderCsvTables(); setCsvModified(true); };
                 tasksTbody.appendChild(tr);
             });
-
             const toolsTbody = document.querySelector("#toolsTable tbody");
             toolsTbody.innerHTML = "";
             state.toolsList.forEach((rec, idx) => {
                 const tr = document.createElement("tr");
-                tr.innerHTML = `<td>${rec.index}</td><td>${rec.install_case_part||'1'}</td><td>${rec.install_case_time}</td><td>${rec.uninstall_case_part||'1'}</td><td>${rec.uninstall_case_time}</td><td>${rec.arm}</td><td>${rec.commercial_toolname}</td><td>${rec.groundtruth_toolname}</td><td><button class="csv-btn-del" data-idx="${idx}">Del</button></td>`;
+                tr.innerHTML = `<td>${rec.index}</td><td>${rec.install_case_part||"1"}</td><td>${rec.install_case_time}</td><td>${rec.uninstall_case_part||"1"}</td><td>${rec.uninstall_case_time}</td><td>${rec.arm}</td><td>${rec.commercial_toolname}</td><td>${rec.groundtruth_toolname}</td><td><button class="csv-btn-del" data-idx="${idx}">Del</button></td>`;
                 tr.querySelector(".csv-btn-del").onclick = () => { state.toolsList.splice(idx, 1); renderCsvTables(); setCsvModified(true); };
                 toolsTbody.appendChild(tr);
             });
@@ -476,7 +690,7 @@
             state.csvModified = val;
             const txt = $("csvStatusText");
             if (val) { txt.innerText = "Unsaved CSV modifications"; txt.style.color = "var(--danger-hover)"; }
-            else { txt.innerText = "No unsaved CSV changes"; txt.style.color = "var(--text-sub)"; }
+            else      { txt.innerText = "No unsaved CSV changes";   txt.style.color = "var(--text-sub)"; }
         }
 
         $("tabTasksBtn").onclick = function() { this.classList.add("active"); $("tabToolsBtn").classList.remove("active"); $("tabTasksContent").style.display = "block"; $("tabToolsContent").style.display = "none"; };
@@ -484,17 +698,16 @@
 
         $("addTaskBtn").onclick = () => {
             const name = $("taskNameInput").value.trim();
-            const startVal = parseFloat($("taskStartInput").value);
-            const stopVal = parseFloat($("taskStopInput").value);
+            const startVal = parseFloat($("taskStartInput").value), stopVal = parseFloat($("taskStopInput").value);
             if (!name || isNaN(startVal) || isNaN(stopVal)) return alert("Valid Task Name and Times required.");
-            state.tasksList.push({ index: state.tasksList.length, start_part: $("taskStartPartInput").value || 1, start_time: startVal, stop_part: $("taskStopPartInput").value || 1, stop_time: stopVal, groundtruth_taskname: name });
+            state.tasksList.push({ index: state.tasksList.length, start_part: $("taskStartPartInput").value||1, start_time: startVal, stop_part: $("taskStopPartInput").value||1, stop_time: stopVal, groundtruth_taskname: name });
             renderCsvTables(); setCsvModified(true);
         };
 
         $("addToolBtn").onclick = () => {
-            const inst = $("toolInstallInput").value.trim(); const uninst = $("toolUninstallInput").value.trim();
+            const inst = $("toolInstallInput").value.trim(), uninst = $("toolUninstallInput").value.trim();
             if (!inst || !uninst) return alert("Install & Uninstall times required.");
-            state.toolsList.push({ index: state.toolsList.length, install_case_part: $("toolInstallPartInput").value || 1, install_case_time: inst, uninstall_case_part: $("toolUninstallPartInput").value || 1, uninstall_case_time: uninst, arm: $("toolArmInput").value, commercial_toolname: $("toolCommNameInput").value.trim(), groundtruth_toolname: $("toolGtNameInput").value.trim() });
+            state.toolsList.push({ index: state.toolsList.length, install_case_part: $("toolInstallPartInput").value||1, install_case_time: inst, uninstall_case_part: $("toolUninstallPartInput").value||1, uninstall_case_time: uninst, arm: $("toolArmInput").value, commercial_toolname: $("toolCommNameInput").value.trim(), groundtruth_toolname: $("toolGtNameInput").value.trim() });
             renderCsvTables(); setCsvModified(true);
         };
 
@@ -502,25 +715,25 @@
             if (!state.directory) return;
             const vidName = state.mediaType === "video" ? state.videos[state.currentIndex] : "";
             const res = await postJSON("/api/save_csv_annotations", { directory: state.directory, video_name: vidName, tasks: state.tasksList, tools: state.toolsList });
-            if (res.success) { showToast("CSV 텍스트 성공적으로 저장 완료!"); setCsvModified(false); }
+            if (res.success) { showToast("CSV saved!"); setCsvModified(false); }
         };
 
         function formatSecondsToHMSf(secVal) {
-            const t = parseFloat(secVal); if (isNaN(t) || t < 0) return "00:00:00.000000";
-            const hrs = Math.floor(t / 3600), mins = Math.floor((t % 3600) / 60), secs = Math.floor(t % 60), ms = Math.floor((t % 1) * 1000000);
-            return `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}.${String(ms).padStart(6,'0')}`;
+            const t = parseFloat(secVal); if (isNaN(t)||t<0) return "00:00:00.000000";
+            const hrs=Math.floor(t/3600), mins=Math.floor((t%3600)/60), secs=Math.floor(t%60), ms=Math.floor((t%1)*1000000);
+            return `${String(hrs).padStart(2,"0")}:${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}.${String(ms).padStart(6,"0")}`;
         }
-        
+
         $("flagIntervalBtn").onclick = () => {
             if (state.mediaType !== "video" || !state.imageLoaded) return;
             const curFrame = getCurrentFrameIndex();
             if (state.timelineStart === null || (state.timelineStart !== null && state.timelineEnd !== null)) {
-                state.timelineStart = curFrame; state.timelineEnd = null; showToast("시작점 저장됨 (Start Flagged)");
+                state.timelineStart = curFrame; state.timelineEnd = null; showToast("Start Flagged");
             } else {
                 state.timelineEnd = curFrame;
-                if (state.timelineEnd < state.timelineStart) { const tmp = state.timelineStart; state.timelineStart = state.timelineEnd; state.timelineEnd = tmp; }
-                showToast("끝점 저장 완료 -> CSV 자동 기입됨");
-                const startSec = state.timelineStart / state.videoFps, stopSec = state.timelineEnd / state.videoFps;
+                if (state.timelineEnd < state.timelineStart) { const tmp=state.timelineStart; state.timelineStart=state.timelineEnd; state.timelineEnd=tmp; }
+                showToast("End Flagged -> CSV auto-filled");
+                const startSec = state.timelineStart/state.videoFps, stopSec = state.timelineEnd/state.videoFps;
                 if ($("tabTasksBtn").classList.contains("active")) {
                     $("taskStartInput").value = startSec.toFixed(3); $("taskStopInput").value = stopSec.toFixed(3);
                 } else {
@@ -529,27 +742,24 @@
             }
         };
 
-        // ======== AI Mask Propagation ========
+        // ── AI Mask Propagation ──────────────────────────────────────────
         async function propagateMasksAndBboxes(fromFrame, toFrame) {
             if (fromFrame === toFrame || state.mediaType !== "video") return;
             if (!state.frameAnnotations[fromFrame]) return;
-            
             if (!state.frameAnnotations[toFrame]) state.frameAnnotations[toFrame] = { bboxes: {}, masks: {} };
             const fromAnn = state.frameAnnotations[fromFrame];
-            const toAnn = state.frameAnnotations[toFrame];
+            const toAnn   = state.frameAnnotations[toFrame];
 
-            if (fromAnn.bboxes && Object.keys(fromAnn.bboxes).length > 0 && Object.keys(toAnn.bboxes).length === 0) {
+            if (fromAnn.bboxes && Object.keys(fromAnn.bboxes).length > 0 && Object.keys(toAnn.bboxes).length === 0)
                 toAnn.bboxes = JSON.parse(JSON.stringify(fromAnn.bboxes));
-            }
 
             if (fromAnn.masks && Object.keys(fromAnn.masks).length > 0 && Object.keys(toAnn.masks).length === 0 && $("aiAutoPropose").checked) {
                 const vidName = state.videos[state.currentIndex];
                 const encodeRes = await postJSON("/api/sam_encode", { directory: state.directory, video_name: vidName, frame_index: toFrame });
                 if (!encodeRes.success) { showToast(encodeRes.error, true); return; }
-
                 const jobs = Object.keys(fromAnn.masks).map(async (cidStr) => {
                     const cid = parseInt(cidStr);
-                    if (!fromAnn.masks[cid] || fromAnn.masks[cid].every(v => v === 0)) return;
+                    if (!fromAnn.masks[cid] || fromAnn.masks[cid].every(v => v===0)) return;
                     const res = await postJSON("/api/sam_refine", { directory: state.directory, video_name: vidName, frame_index: toFrame, class_id: cid, rle: rleEncode(fromAnn.masks[cid]), width: state.imageWidth, height: state.imageHeight });
                     if (res.success && res.rle) toAnn.masks[cid] = rleDecode(res.rle, state.imageWidth, state.imageHeight);
                 });
@@ -558,33 +768,34 @@
         }
 
         async function changeFrame(delta) {
+            const step = getStep();
             const current = getCurrentFrameIndex();
-            const target = Math.max(0, Math.min(state.videoFrameCount - 1, current + delta));
+            const target  = Math.max(0, Math.min(state.videoFrameCount-1, current + delta * step));
             if (current === target) return;
-            
-            saveCurrentFrameReport(activeReportFrame); 
-            const autoPropose = $("aiAutoPropose").checked;
-            const hasSourceMask = state.frameAnnotations[current] && state.frameAnnotations[current].masks && Object.keys(state.frameAnnotations[current].masks).length > 0;
-            const targetHasMask = state.frameAnnotations[target] && state.frameAnnotations[target].masks && Object.keys(state.frameAnnotations[target].masks).length > 0;
-            
-            if (autoPropose && hasSourceMask && !targetHasMask && state.mediaType === "video") {
-                showLoading(`🤖 AI Segmentation Tracking... (Frame ${current} ➔ ${target})`);
-            }
 
-            try { await propagateMasksAndBboxes(current, target); } 
+            saveCurrentFrameReport(activeReportFrame);
+            const autoPropose = $("aiAutoPropose").checked;
+            const hasSourceMask  = state.frameAnnotations[current]?.masks && Object.keys(state.frameAnnotations[current].masks).length > 0;
+            const targetHasMask  = state.frameAnnotations[target]?.masks  && Object.keys(state.frameAnnotations[target].masks).length  > 0;
+
+            if (autoPropose && hasSourceMask && !targetHasMask && state.mediaType === "video")
+                showLoading(`🤖 AI Segmentation Tracking... (Frame ${current} ➔ ${target})`);
+
+            try { await propagateMasksAndBboxes(current, target); }
             finally { hideLoading(); }
             seekToFrame(target);
         }
 
         function seekToFrame(frameIdx) {
-            loadFrameReport(frameIdx); 
-            state.undoStack = []; // 프레임 변경 시 히스토리 초기화
+            loadFrameReport(frameIdx);
+            state.undoStack = [];
             if (state.videoPlayMode === "frame_extraction") {
                 state.currentFrameIndexFE = frameIdx;
-                const imgObj = new Image(); imgObj.src = `/api/get_video_frame?path=${encodeURIComponent(state.directory + '/' + state.videos[state.currentIndex])}&frame_index=${frameIdx}`;
-                imgObj.onload = async function() { imgCtx.drawImage(imgObj, 0, 0); updateTimelineGUI(frameIdx); scheduleRedraw(); };
+                const imgObj = new Image();
+                imgObj.src = `/api/get_video_frame?path=${encodeURIComponent(state.directory+"/"+state.videos[state.currentIndex])}&frame_index=${frameIdx}`;
+                imgObj.onload = () => { imgCtx.drawImage(imgObj, 0, 0); updateTimelineGUI(frameIdx); scheduleRedraw(); };
             } else {
-                state.lastFrameIndex = getCurrentFrameIndex(); 
+                state.lastFrameIndex = getCurrentFrameIndex();
                 videoPlayer.currentTime = frameIdx / state.videoFps;
             }
         }
@@ -612,41 +823,29 @@
 
         function getCurrentFrameIndex() {
             if (state.videoPlayMode === "frame_extraction") return state.currentFrameIndexFE;
-            return videoPlayer.duration ? Math.min(state.videoFrameCount - 1, Math.round(videoPlayer.currentTime * state.videoFps)) : 0;
+            return videoPlayer.duration ? Math.min(state.videoFrameCount-1, Math.round(videoPlayer.currentTime * state.videoFps)) : 0;
         }
 
-        // ======== Reports & Audio ========
-        function loadFrameReport(fIdx) { activeReportFrame = fIdx; frameReportTextarea.value = state.reports[String(fIdx)] || ""; }
-        function saveCurrentFrameReport(fIdx) {
-            if (fIdx === -1) return;
-            const val = frameReportTextarea.value.trim();
-            if (val) state.reports[String(fIdx)] = val; else delete state.reports[String(fIdx)];
-            postJSON("/api/save_reports", { directory: state.directory, video_name: state.mediaType === "video" ? state.videos[state.currentIndex] : "", reports: state.reports });
-        }
-        frameReportTextarea.oninput = (e) => { if (activeReportFrame !== -1) state.reports[String(activeReportFrame)] = e.target.value; };
-
-        $("exportExcelBtn").onclick = async () => {
-            saveCurrentFrameReport(activeReportFrame);
-            const res = await postJSON("/api/export_reports_excel", { directory: state.directory, video_name: state.mediaType === "video" ? state.videos[state.currentIndex] : "", reports: state.reports, fps: state.videoFps });
-            if (res.success) alert(`Excel compiled successfully:\n${res.path}`);
-        };
-
+        // ── STT ─────────────────────────────────────────────────────────
         $("sttRecordBtn").onclick = async function() {
             if (mediaRecorder && mediaRecorder.state === "recording") {
                 mediaRecorder.stop(); this.classList.remove("recording"); this.innerText = "⏳";
             } else {
                 audioChunks = [];
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
                 mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
                 mediaRecorder.onstop = async () => {
-                    const fd = new FormData(); fd.append('audio', new Blob(audioChunks, { type: 'audio/webm' }), 'voice.webm');
+                    const fd = new FormData(); fd.append("audio", new Blob(audioChunks, { type: "audio/webm" }), "voice.webm");
                     showToast("음성을 텍스트로 변환 중...");
                     const r = await fetch("/api/stt", { method: "POST", body: fd });
                     const res = await r.json();
                     if (res.success && res.text) {
                         frameReportTextarea.value = (frameReportTextarea.value + " " + res.text).trim();
-                        if (activeReportFrame !== -1) state.reports[String(activeReportFrame)] = frameReportTextarea.value;
+                        if (activeReportFrame !== -1 && state.currentOperator) {
+                            if (!state.reports[state.currentOperator]) state.reports[state.currentOperator] = {};
+                            state.reports[state.currentOperator][String(activeReportFrame)] = frameReportTextarea.value;
+                        }
                     }
                     $("sttRecordBtn").innerText = "🎙️";
                 };
@@ -654,406 +853,258 @@
             }
         };
 
-      
+        // ── Undo 히스토리 ────────────────────────────────────────────────
         function saveHistory() {
             if (!state.imageLoaded) return;
-            
-            let currentData;
+            let snap;
             if (state.mediaType === "video") {
                 const cur = getCurrentFrameIndex();
-                if (!state.frameAnnotations[cur]) state.frameAnnotations[cur] = { masks: {}, bboxes: {} };
-                
-                const masksCopy = {};
-                if (state.frameAnnotations[cur].masks) {
-                    Object.keys(state.frameAnnotations[cur].masks).forEach(cid => {
-                        masksCopy[cid] = new Uint8Array(state.frameAnnotations[cur].masks[cid]);
-                    });
-                }
-                const bboxesCopy = {};
-                if (state.frameAnnotations[cur].bboxes) {
-                    Object.keys(state.frameAnnotations[cur].bboxes).forEach(cid => {
-                        bboxesCopy[cid] = JSON.parse(JSON.stringify(state.frameAnnotations[cur].bboxes[cid]));
-                    });
-                }
-                currentData = { masks: masksCopy, bboxes: bboxesCopy };
+                if (!state.frameAnnotations[cur]) state.frameAnnotations[cur] = { masks:{}, bboxes:{} };
+                const masks = {}, bboxes = {};
+                Object.keys(state.frameAnnotations[cur].masks||{}).forEach(c => masks[c] = new Uint8Array(state.frameAnnotations[cur].masks[c]));
+                Object.keys(state.frameAnnotations[cur].bboxes||{}).forEach(c => bboxes[c] = JSON.parse(JSON.stringify(state.frameAnnotations[cur].bboxes[c])));
+                snap = { masks, bboxes };
             } else {
-                const layersCopy = {};
-                Object.keys(state.layers).forEach(cid => {
-                    layersCopy[cid] = new Uint8Array(state.layers[cid]);
-                });
-                currentData = { layers: layersCopy };
+                const layers = {};
+                Object.keys(state.layers).forEach(c => layers[c] = new Uint8Array(state.layers[c]));
+                snap = { layers };
             }
-
-            state.undoStack.push(currentData);
-            if (state.undoStack.length > MAX_UNDO_HISTORY) {
-                state.undoStack.shift(); // 오래된 기록부터 제거
-            }
+            state.undoStack.push(snap);
+            if (state.undoStack.length > MAX_UNDO_HISTORY) state.undoStack.shift();
         }
 
         function performUndo() {
-            if (state.undoStack.length === 0) {
-                showToast("되돌릴 작업이 없습니다.", true);
-                return;
-            }
-            
-            const previousData = state.undoStack.pop();
-            
+            if (!state.undoStack.length) { showToast("Nothing to undo", true); return; }
+            const snap = state.undoStack.pop();
             if (state.mediaType === "video") {
                 const cur = getCurrentFrameIndex();
-                if (!state.frameAnnotations[cur]) state.frameAnnotations[cur] = { masks: {}, bboxes: {} };
-                
-                state.frameAnnotations[cur].masks = {};
-                if (previousData.masks) {
-                    Object.keys(previousData.masks).forEach(cid => {
-                        state.frameAnnotations[cur].masks[cid] = new Uint8Array(previousData.masks[cid]);
-                    });
-                }
+                if (!state.frameAnnotations[cur]) state.frameAnnotations[cur] = { masks:{}, bboxes:{} };
+                state.frameAnnotations[cur].masks  = {};
                 state.frameAnnotations[cur].bboxes = {};
-                if (previousData.bboxes) {
-                    Object.keys(previousData.bboxes).forEach(cid => {
-                        state.frameAnnotations[cur].bboxes[cid] = JSON.parse(JSON.stringify(previousData.bboxes[cid]));
-                    });
-                }
+                Object.keys(snap.masks||{}).forEach(c  => state.frameAnnotations[cur].masks[c]  = new Uint8Array(snap.masks[c]));
+                Object.keys(snap.bboxes||{}).forEach(c => state.frameAnnotations[cur].bboxes[c] = JSON.parse(JSON.stringify(snap.bboxes[c])));
             } else {
                 state.layers = {};
-                if (previousData.layers) {
-                    Object.keys(previousData.layers).forEach(cid => {
-                        state.layers[cid] = new Uint8Array(previousData.layers[cid]);
-                    });
-                }
+                Object.keys(snap.layers||{}).forEach(c => state.layers[c] = new Uint8Array(snap.layers[c]));
             }
-            scheduleRedraw();
-            showToast("실행 취소 (Undo)");
+            scheduleRedraw(); showToast("Undo");
         }
 
-        // 폐곡선(폴리곤) 내부를 채우는 스캔라인 채우기. even-odd 규칙으로 내부 판정.
+        // ── 폴리곤 채우기 (스캔라인 even-odd) ───────────────────────────
         function fillPolygon(layer, pts, width, height, value) {
             if (pts.length < 3) return;
-            let minY = Infinity, maxY = -Infinity;
-            for (const p of pts) { if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y; }
-            minY = Math.max(0, Math.floor(minY));
-            maxY = Math.min(height - 1, Math.ceil(maxY));
+            let minY=Infinity, maxY=-Infinity;
+            for (const p of pts) { if (p.y<minY) minY=p.y; if (p.y>maxY) maxY=p.y; }
+            minY = Math.max(0, Math.floor(minY)); maxY = Math.min(height-1, Math.ceil(maxY));
             const n = pts.length;
-
-            for (let y = minY; y <= maxY; y++) {
-                const crossings = [];
-                for (let i = 0, j = n - 1; i < n; j = i++) {
-                    const yi = pts[i].y, yj = pts[j].y;
-                    if ((yi > y) !== (yj > y)) {
-                        crossings.push(pts[i].x + (y - yi) / (yj - yi) * (pts[j].x - pts[i].x));
-                    }
+            for (let y=minY; y<=maxY; y++) {
+                const crossings=[];
+                for (let i=0,j=n-1; i<n; j=i++) {
+                    const yi=pts[i].y, yj=pts[j].y;
+                    if ((yi>y) !== (yj>y)) crossings.push(pts[i].x + (y-yi)/(yj-yi)*(pts[j].x-pts[i].x));
                 }
-                crossings.sort((a, b) => a - b);
-                for (let k = 0; k + 1 < crossings.length; k += 2) {
-                    const xStart = Math.max(0, Math.ceil(crossings[k]));
-                    const xEnd = Math.min(width - 1, Math.floor(crossings[k + 1]));
-                    for (let x = xStart; x <= xEnd; x++) layer[y * width + x] = value;
+                crossings.sort((a,b)=>a-b);
+                for (let k=0; k+1<crossings.length; k+=2) {
+                    const xs=Math.max(0,Math.ceil(crossings[k])), xe=Math.min(width-1,Math.floor(crossings[k+1]));
+                    for (let x=xs; x<=xe; x++) layer[y*width+x]=value;
                 }
             }
         }
 
-        // ======== Canvas Drawing Logic ========
+        // ── Canvas 렌더링 ────────────────────────────────────────────────
         function scheduleRedraw() {
-            if (!isRedrawing) {
-                isRedrawing = true;
-                requestAnimationFrame(() => { redrawMasks(); redrawBbox(); isRedrawing = false; });
-            }
+            if (!isRedrawing) { isRedrawing=true; requestAnimationFrame(()=>{ redrawMasks(); redrawBbox(); isRedrawing=false; }); }
         }
 
         function getActiveMaskLayer(cid) {
             if (state.mediaType === "video") {
                 const cur = getCurrentFrameIndex();
-                if (!state.frameAnnotations[cur]) state.frameAnnotations[cur] = { bboxes: {}, masks: {} };
-                if (!state.frameAnnotations[cur].masks[cid]) state.frameAnnotations[cur].masks[cid] = new Uint8Array(state.imageWidth * state.imageHeight);
+                if (!state.frameAnnotations[cur]) state.frameAnnotations[cur] = { bboxes:{}, masks:{} };
+                if (!state.frameAnnotations[cur].masks[cid]) state.frameAnnotations[cur].masks[cid] = new Uint8Array(state.imageWidth*state.imageHeight);
                 return state.frameAnnotations[cur].masks[cid];
             } else {
-                if (!state.layers[cid]) state.layers[cid] = new Uint8Array(state.imageWidth * state.imageHeight);
+                if (!state.layers[cid]) state.layers[cid] = new Uint8Array(state.imageWidth*state.imageHeight);
                 return state.layers[cid];
             }
         }
 
         function getMousePos(e) {
             const rect = maskCanvas.getBoundingClientRect();
-            return { x: Math.round((e.clientX - rect.left) * (state.imageWidth / rect.width)), y: Math.round((e.clientY - rect.top) * (state.imageHeight / rect.height)) };
+            return { x: Math.round((e.clientX-rect.left)*(state.imageWidth/rect.width)), y: Math.round((e.clientY-rect.top)*(state.imageHeight/rect.height)) };
         }
 
         function paintPixel(pos) {
-            const layer = getActiveMaskLayer(state.currentClass); 
-            const r = state.brushSize; const r2 = r*r;
-            const minX = Math.max(0, pos.x - r); const maxX = Math.min(state.imageWidth - 1, pos.x + r);
-            const minY = Math.max(0, pos.y - r); const maxY = Math.min(state.imageHeight - 1, pos.y + r);
-            
-            for (let y = minY; y <= maxY; y++) {
-                for (let x = minX; x <= maxX; x++) {
-                    if ((x - pos.x)**2 + (y - pos.y)**2 <= r2) layer[y * state.imageWidth + x] = state.isEraser ? 0 : 1;
-                }
-            }
+            const layer=getActiveMaskLayer(state.currentClass); const r=state.brushSize; const r2=r*r;
+            const minX=Math.max(0,pos.x-r), maxX=Math.min(state.imageWidth-1,pos.x+r);
+            const minY=Math.max(0,pos.y-r), maxY=Math.min(state.imageHeight-1,pos.y+r);
+            for (let y=minY;y<=maxY;y++) for (let x=minX;x<=maxX;x++) if ((x-pos.x)**2+(y-pos.y)**2<=r2) layer[y*state.imageWidth+x]=state.isEraser?0:1;
         }
 
         function interpolateAndPaint(p1, p2) {
-            const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-            const steps = Math.max(1, Math.ceil(dist / (state.brushSize / 2)));
-            for (let i = 0; i <= steps; i++) {
-                paintPixel({ x: Math.round(p1.x + (p2.x - p1.x) * (i / steps)), y: Math.round(p1.y + (p2.y - p1.y) * (i / steps)) });
-            }
+            const dist=Math.hypot(p2.x-p1.x,p2.y-p1.y);
+            const steps=Math.max(1,Math.ceil(dist/(state.brushSize/2)));
+            for (let i=0;i<=steps;i++) paintPixel({x:Math.round(p1.x+(p2.x-p1.x)*(i/steps)),y:Math.round(p1.y+(p2.y-p1.y)*(i/steps))});
         }
 
         maskCanvas.onmousedown = function(e) {
             if (!state.imageLoaded) return;
-            const pos = getMousePos(e);
-            lastMousePos = pos;
-
-            // ★ 작업 시작 전 히스토리 저장 (Undo 기록)
-            saveHistory();
-            
-            if (state.isContourMode) {
-                state.isDrawingContour = true;
-                state.contourPoints = [pos];
-            }
-            else if (state.isBboxMode) { 
-                state.isDrawingBbox = true; state.bboxStart = pos; state.bboxCurrent = pos; 
-            } 
-            else { 
-                state.isDrawing = true; paintPixel(pos); scheduleRedraw(); 
-            }
+            const pos = getMousePos(e); lastMousePos = pos; saveHistory();
+            if (state.isContourMode) { state.isDrawingContour=true; state.contourPoints=[pos]; }
+            else if (state.isBboxMode)  { state.isDrawingBbox=true; state.bboxStart=pos; state.bboxCurrent=pos; }
+            else { state.isDrawing=true; paintPixel(pos); scheduleRedraw(); }
         };
 
         maskCanvas.onmousemove = function(e) {
             if (!state.imageLoaded) return;
             const pos = getMousePos(e);
-            if (state.isDrawing) {
-                interpolateAndPaint(lastMousePos, pos);
-                lastMousePos = pos;
-                scheduleRedraw();
-            }
-            else if (state.isDrawingBbox && state.isBboxMode) {
-                state.bboxCurrent = pos;
-                scheduleRedraw();
-            }
+            if (state.isDrawing) { interpolateAndPaint(lastMousePos,pos); lastMousePos=pos; scheduleRedraw(); }
+            else if (state.isDrawingBbox && state.isBboxMode) { state.bboxCurrent=pos; scheduleRedraw(); }
             else if (state.isDrawingContour && state.isContourMode) {
-                const last = state.contourPoints[state.contourPoints.length - 1];
-                if (!last || Math.hypot(pos.x - last.x, pos.y - last.y) >= 2) state.contourPoints.push(pos);
+                const last=state.contourPoints[state.contourPoints.length-1];
+                if (!last || Math.hypot(pos.x-last.x,pos.y-last.y)>=2) state.contourPoints.push(pos);
                 scheduleRedraw();
             }
         };
 
         window.onmouseup = function(e) {
-            if (state.isDrawing) { state.isDrawing = false; scheduleRedraw(); }
+            if (state.isDrawing) { state.isDrawing=false; scheduleRedraw(); }
             if (state.isDrawingBbox && state.isBboxMode) {
-                state.isDrawingBbox = false; const pos = getMousePos(e);
-                const cur = getCurrentFrameIndex();
-                if (!state.frameAnnotations[cur]) state.frameAnnotations[cur] = { bboxes: {}, masks: {} };
-                if (!state.frameAnnotations[cur].bboxes[state.currentClass]) state.frameAnnotations[cur].bboxes[state.currentClass] = [];
-                
-                const bx = Math.min(state.bboxStart.x, pos.x), by = Math.min(state.bboxStart.y, pos.y);
-                const bw = Math.abs(pos.x - state.bboxStart.x), bh = Math.abs(pos.y - state.bboxStart.y);
-                if (bw > 3 && bh > 3) state.frameAnnotations[cur].bboxes[state.currentClass].push([bx, by, bw, bh, 1]);
-                state.bboxCurrent = null;
-                scheduleRedraw();
+                state.isDrawingBbox=false; const pos=getMousePos(e);
+                const cur=getCurrentFrameIndex();
+                if (!state.frameAnnotations[cur]) state.frameAnnotations[cur]={bboxes:{},masks:{}};
+                if (!state.frameAnnotations[cur].bboxes[state.currentClass]) state.frameAnnotations[cur].bboxes[state.currentClass]=[];
+                const bx=Math.min(state.bboxStart.x,pos.x), by=Math.min(state.bboxStart.y,pos.y);
+                const bw=Math.abs(pos.x-state.bboxStart.x), bh=Math.abs(pos.y-state.bboxStart.y);
+                if (bw>3&&bh>3) state.frameAnnotations[cur].bboxes[state.currentClass].push([bx,by,bw,bh,1]);
+                state.bboxCurrent=null; scheduleRedraw();
             }
             if (state.isDrawingContour && state.isContourMode) {
-                state.isDrawingContour = false;
-                if (state.contourPoints.length >= 3) {
-                    const layer = getActiveMaskLayer(state.currentClass);
-                    fillPolygon(layer, state.contourPoints, state.imageWidth, state.imageHeight, state.isEraser ? 0 : 1);
+                state.isDrawingContour=false;
+                if (state.contourPoints.length>=3) {
+                    const layer=getActiveMaskLayer(state.currentClass);
+                    fillPolygon(layer, state.contourPoints, state.imageWidth, state.imageHeight, state.isEraser?0:1);
                 }
-                state.contourPoints = [];
-                scheduleRedraw();
+                state.contourPoints=[]; scheduleRedraw();
             }
         };
 
         function redrawMasks() {
             if (!state.imageLoaded) return;
             maskCtx.clearRect(0,0,state.imageWidth,state.imageHeight);
-            const imgData = maskCtx.createImageData(state.imageWidth, state.imageHeight);
-            const d = imgData.data;
-            const am = state.mediaType === "video" ? ((state.frameAnnotations[getCurrentFrameIndex()] || {}).masks || {}) : state.layers;
-            
-            const activeClasses = [];
-            const alpha = Math.round(state.opacity * 255);
-            for (const cid in state.classes) {
-                if (am[cid]) {
-                    activeClasses.push({ data: am[cid], r: state.classes[cid].rgb.r, g: state.classes[cid].rgb.g, b: state.classes[cid].rgb.b, alpha: alpha });
-                }
-            }
-
-            const size = state.imageWidth * state.imageHeight;
-            const numClasses = activeClasses.length;
-
-            for (let i = 0; i < size; i++) {
-                for (let c = 0; c < numClasses; c++) {
-                    if (activeClasses[c].data[i] > 0) {
-                        const offset = i * 4;
-                        d[offset] = activeClasses[c].r; d[offset+1] = activeClasses[c].g; d[offset+2] = activeClasses[c].b; d[offset+3] = activeClasses[c].alpha;
-                        break; 
-                    }
-                }
-            }
-            maskCtx.putImageData(imgData, 0, 0);
+            const imgData=maskCtx.createImageData(state.imageWidth,state.imageHeight); const d=imgData.data;
+            const am = state.mediaType==="video" ? ((state.frameAnnotations[getCurrentFrameIndex()]||{}).masks||{}) : state.layers;
+            const alpha=Math.round(state.opacity*255);
+            const active=state.classOrder.filter(c=>am[c]).map(c=>({data:am[c],r:state.classes[c]?.rgb.r,g:state.classes[c]?.rgb.g,b:state.classes[c]?.rgb.b,alpha}));
+            const size=state.imageWidth*state.imageHeight;
+            for (let i=0;i<size;i++) for (const cls of active) if (cls.data[i]>0) { const o=i*4; d[o]=cls.r;d[o+1]=cls.g;d[o+2]=cls.b;d[o+3]=cls.alpha; break; }
+            maskCtx.putImageData(imgData,0,0);
         }
 
         function redrawBbox() {
             if (!state.imageLoaded) return;
             bboxCtx.clearRect(0,0,state.imageWidth,state.imageHeight);
 
-            // 그리는 중인 폐곡선 미리보기 (이미지/비디오 공통)
-            if (state.isDrawingContour && state.contourPoints.length > 1) {
-                const cls = state.classes[state.currentClass];
-                bboxCtx.strokeStyle = cls.color;
-                bboxCtx.lineWidth = 2;
-
-                // 실선: 지금까지 그린 경로
-                bboxCtx.setLineDash([]);
+            if (state.isDrawingContour && state.contourPoints.length>1) {
+                const cls=state.classes[state.currentClass];
+                bboxCtx.strokeStyle=cls.color; bboxCtx.lineWidth=2; bboxCtx.setLineDash([]);
                 bboxCtx.beginPath();
                 bboxCtx.moveTo(state.contourPoints[0].x, state.contourPoints[0].y);
-                for (let i = 1; i < state.contourPoints.length; i++) bboxCtx.lineTo(state.contourPoints[i].x, state.contourPoints[i].y);
+                for (let i=1;i<state.contourPoints.length;i++) bboxCtx.lineTo(state.contourPoints[i].x, state.contourPoints[i].y);
                 bboxCtx.stroke();
-
-                // 점선: 마지막 점 → 시작점 (폐곡선 예고)
-                const last = state.contourPoints[state.contourPoints.length - 1];
-                const first = state.contourPoints[0];
-                bboxCtx.setLineDash([6, 4]);
-                bboxCtx.globalAlpha = 0.6;
-                bboxCtx.beginPath();
-                bboxCtx.moveTo(last.x, last.y);
-                bboxCtx.lineTo(first.x, first.y);
-                bboxCtx.stroke();
-                bboxCtx.setLineDash([]);
-                bboxCtx.globalAlpha = 1.0;
-
-                // 시작점 원형 마커
-                bboxCtx.fillStyle = cls.color;
-                bboxCtx.beginPath();
-                bboxCtx.arc(first.x, first.y, 5, 0, Math.PI * 2);
-                bboxCtx.fill();
+                const last=state.contourPoints[state.contourPoints.length-1], first=state.contourPoints[0];
+                bboxCtx.setLineDash([6,4]); bboxCtx.globalAlpha=0.6;
+                bboxCtx.beginPath(); bboxCtx.moveTo(last.x,last.y); bboxCtx.lineTo(first.x,first.y); bboxCtx.stroke();
+                bboxCtx.setLineDash([]); bboxCtx.globalAlpha=1.0;
+                bboxCtx.fillStyle=cls.color; bboxCtx.beginPath(); bboxCtx.arc(first.x,first.y,5,0,Math.PI*2); bboxCtx.fill();
             }
 
             if (state.mediaType !== "video") return;
-            const b = (state.frameAnnotations[getCurrentFrameIndex()] || {}).bboxes || {};
-            Object.keys(b).forEach(cid => {
-                b[cid].forEach(box => {
-                    bboxCtx.strokeStyle = state.classes[cid].color; bboxCtx.lineWidth = 3;
-                    bboxCtx.strokeRect(box[0], box[1], box[2], box[3]);
-                });
-            });
+            const b=(state.frameAnnotations[getCurrentFrameIndex()]||{}).bboxes||{};
+            Object.keys(b).forEach(cid => { b[cid].forEach(box => { bboxCtx.strokeStyle=(state.classes[cid]||{color:"#fff"}).color; bboxCtx.lineWidth=3; bboxCtx.strokeRect(box[0],box[1],box[2],box[3]); }); });
             if (state.isDrawingBbox && state.bboxStart && state.bboxCurrent) {
-                bboxCtx.strokeStyle = state.classes[state.currentClass].color; bboxCtx.lineWidth = 2;
-                bboxCtx.strokeRect(
-                    Math.min(state.bboxStart.x, state.bboxCurrent.x), Math.min(state.bboxStart.y, state.bboxCurrent.y),
-                    Math.abs(state.bboxCurrent.x - state.bboxStart.x), Math.abs(state.bboxCurrent.y - state.bboxStart.y)
-                );
+                bboxCtx.strokeStyle=(state.classes[state.currentClass]||{color:"#fff"}).color; bboxCtx.lineWidth=2;
+                bboxCtx.strokeRect(Math.min(state.bboxStart.x,state.bboxCurrent.x),Math.min(state.bboxStart.y,state.bboxCurrent.y),Math.abs(state.bboxCurrent.x-state.bboxStart.x),Math.abs(state.bboxCurrent.y-state.bboxStart.y));
             }
         }
-        function redrawAnnotations() { redrawMasks(); redrawBbox(); }
 
-        // 버튼 클릭 이벤트
-        $("drawBtn").onclick    = function() { state.isEraser=false; state.isBboxMode=false; state.isContourMode=false; state.isBucketMode=false; setActiveToolBtn(this); };
-        $("eraseBtn").onclick   = function() { state.isEraser=true;  state.isBboxMode=false; state.isContourMode=false; state.isBucketMode=false; setActiveToolBtn(this); };
-        $("contourBtn").onclick = function() { state.isEraser=false; state.isBboxMode=false; state.isContourMode=true;  state.isBucketMode=false; setActiveToolBtn(this); };
-        $("bboxBtn").onclick    = function() { state.isEraser=false; state.isBboxMode=true;  state.isContourMode=false; state.isBucketMode=false; setActiveToolBtn(this); };
-        
+        // ── 도구 버튼 ────────────────────────────────────────────────────
+        $("drawBtn").onclick    = function() { state.isEraser=false; state.isBboxMode=false; state.isContourMode=false; setActiveToolBtn(this); };
+        $("eraseBtn").onclick   = function() { state.isEraser=true;  state.isBboxMode=false; state.isContourMode=false; setActiveToolBtn(this); };
+        $("contourBtn").onclick = function() { state.isEraser=false; state.isBboxMode=false; state.isContourMode=true;  setActiveToolBtn(this); };
+        $("bboxBtn").onclick    = function() { state.isEraser=false; state.isBboxMode=true;  state.isContourMode=false; setActiveToolBtn(this); };
         function setActiveToolBtn(el) { document.querySelectorAll(".btn-tool").forEach(b=>b.classList.remove("active")); el.classList.add("active"); }
 
-        $("brushSize").oninput = (e) => { state.brushSize = parseInt(e.target.value); $("brushSizeVal").innerText = `${state.brushSize} px`; };
-        $("maskOpacity").oninput = (e) => { state.opacity = parseInt(e.target.value)/100; $("opacityVal").innerText = `${e.target.value}%`; scheduleRedraw(); };
-        timelineSlider.oninput = (e) => { seekToFrame(parseInt(e.target.value)); };
-
+        $("brushSize").oninput  = (e) => { state.brushSize=parseInt(e.target.value); $("brushSizeVal").innerText=`${state.brushSize} px`; };
+        $("maskOpacity").oninput= (e) => { state.opacity=parseInt(e.target.value)/100; $("opacityVal").innerText=`${e.target.value}%`; scheduleRedraw(); };
+        timelineSlider.oninput  = (e) => { seekToFrame(parseInt(e.target.value)); };
         $("timelinePrevBtn").onclick = () => changeFrame(-1);
         $("timelineNextBtn").onclick = () => changeFrame(1);
 
-        // ======== 저장 로직 ========
+        // ── 저장 ─────────────────────────────────────────────────────────
         async function syncAnnotationsToServer() {
-            const vidName = state.mediaType === "video" ? state.videos[state.currentIndex] : "";
-            const imgName = state.mediaType === "image" ? state.images[state.currentIndex] : "";
+            const vidName = state.mediaType==="video" ? state.videos[state.currentIndex] : "";
+            const imgName = state.mediaType==="image" ? state.images[state.currentIndex] : "";
 
             if (state.mediaType === "video") {
-                const annotations = []; let annId = 1;
+                const annotations=[]; let annId=1;
                 Object.keys(state.frameAnnotations).forEach(fIdx => {
-                    const frameData = state.frameAnnotations[fIdx];
-                    if (frameData.bboxes) {
-                        Object.keys(frameData.bboxes).forEach(cid => {
-                            frameData.bboxes[cid].forEach(box => {
-                                annotations.push({ id: annId++, image_id: parseInt(fIdx), category_id: parseInt(cid), bbox: [box[0], box[1], box[2], box[3]], instance_id: box[4] || 1, area: box[2]*box[3], iscrowd: 0 });
-                            });
-                        });
-                    }
-                    if (frameData.masks) {
-                        Object.keys(frameData.masks).forEach(cid => {
-                            const rle = rleEncode(frameData.masks[cid]);
-                            if (rle.length > 0) {
-                                annotations.push({ id: annId++, image_id: parseInt(fIdx), category_id: parseInt(cid), segmentation: { counts: rle, size: [state.imageHeight, state.imageWidth] }, area: frameData.masks[cid].reduce((a,b)=>a+b,0), iscrowd: 0 });
-                            }
-                        });
-                    }
+                    const fd=state.frameAnnotations[fIdx];
+                    if (fd.bboxes) Object.keys(fd.bboxes).forEach(cid => fd.bboxes[cid].forEach(box =>
+                        annotations.push({id:annId++,image_id:parseInt(fIdx),category_id:parseInt(cid),bbox:[box[0],box[1],box[2],box[3]],instance_id:box[4]||1,area:box[2]*box[3],iscrowd:0})));
+                    if (fd.masks) Object.keys(fd.masks).forEach(cid => {
+                        const rle=rleEncode(fd.masks[cid]);
+                        if (rle.length>0) annotations.push({id:annId++,image_id:parseInt(fIdx),category_id:parseInt(cid),segmentation:{counts:rle,size:[state.imageHeight,state.imageWidth]},area:fd.masks[cid].reduce((a,b)=>a+b,0),iscrowd:0});
+                    });
                 });
-
-                const cocoData = {
-                    info: { video_name: vidName, description: "SurgVU Export" },
-                    categories: Object.keys(state.classes).map(cid => ({ id: parseInt(cid), name: state.classes[cid].name })),
-                    images: Array.from({length: state.videoFrameCount}, (_, i) => ({ id: i, file_name: `${vidName}_frame_${i}.jpg`, width: state.imageWidth, height: state.imageHeight })),
-                    annotations: annotations
+                const cocoData={
+                    info:{video_name:vidName,description:"SurgVU Export"},
+                    categories:state.classOrder.filter(c=>state.classes[c]).map(c=>({id:c,name:state.classes[c].name})),
+                    images:Array.from({length:state.videoFrameCount},(_,i)=>({id:i,file_name:`${vidName}_frame_${i}.jpg`,width:state.imageWidth,height:state.imageHeight})),
+                    annotations
                 };
-
-                const res = await postJSON("/api/save_coco_annotations", { directory: state.directory, video_name: vidName, coco_data: cocoData });
+                const res=await postJSON("/api/save_coco_annotations",{directory:state.directory,video_name:vidName,coco_data:cocoData});
                 return res.success;
             } else {
-                const class_layers = {};
-                Object.keys(state.layers).forEach(cid => {
-                    const rle = rleEncode(state.layers[cid]);
-                    if (rle.length > 0) class_layers[cid] = rle;
-                });
-                const maskData = { directory: state.directory, image_name: imgName, width: state.imageWidth, height: state.imageHeight, class_layers: class_layers, classes: state.classes };
-                const res = await postJSON("/api/save_mask", maskData);
+                const class_layers={};
+                Object.keys(state.layers).forEach(cid => { const rle=rleEncode(state.layers[cid]); if (rle.length>0) class_layers[cid]=rle; });
+                const res=await postJSON("/api/save_mask",{directory:state.directory,image_name:imgName,width:state.imageWidth,height:state.imageHeight,class_layers,classes:state.classes});
                 return res.success;
             }
         }
 
         $("saveBtn").onclick = async function() {
             saveCurrentFrameReport(activeReportFrame);
-            const btn = this; btn.innerText = "저장 중... (Saving...)";
+            const btn=this; btn.innerText="저장 중... (Saving...)";
             try {
-                const success = await syncAnnotationsToServer();
-                if (success) showToast(`현재 폴더에 마스크 데이터(JSON)가 저장되었습니다!`);
-                else showToast("저장에 실패했습니다. 터미널 창을 확인해주세요.", true);
-            } catch(e) {
-                console.error(e); showToast("저장 오류 발생", true);
-            }
-            btn.innerText = "💾 마스크/Bbox 최종 파일 저장";
+                const ok=await syncAnnotationsToServer();
+                showToast(ok ? "마스크/Bbox 저장 완료!" : "저장 실패. 터미널 확인", !ok);
+            } catch(e) { console.error(e); showToast("저장 오류", true); }
+            btn.innerText="💾 마스크/Bbox 최종 파일 저장";
         };
 
-        // ★ 키보드 단축키 (Ctrl+Z 포함) ★
+        // ── 키보드 단축키 ────────────────────────────────────────────────
         document.addEventListener("keydown", (e) => {
-            if (document.activeElement === frameReportTextarea || document.activeElement.tagName === "INPUT") return;
-            
-            const key = e.key.toLowerCase();
-
-            // Ctrl + Z (또는 Cmd + Z) 단축키 맵핑
-            if ((e.ctrlKey || e.metaKey) && key === 'z') {
-                e.preventDefault();
-                performUndo();
-                return;
-            }
-
-            if (key === 'a') changeFrame(-1);
-            if (key === 'd') changeFrame(1);
-            if (key === 'f') $("contourBtn").click(); 
-            if (key === 'b') $("drawBtn").click(); 
-            if (key === 'e') $("eraseBtn").click(); 
+            const tag = document.activeElement.tagName;
+            if (tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
+            const key=e.key.toLowerCase();
+            if ((e.ctrlKey||e.metaKey)&&key==="z") { e.preventDefault(); performUndo(); return; }
+            if (key==="a") changeFrame(-1);
+            if (key==="d") changeFrame(1);
+            if (key==="f") $("contourBtn").click();
+            if (key==="b") $("drawBtn").click();
+            if (key==="e") $("eraseBtn").click();
         });
 
-        function rleEncode(a) { const r = []; if(!a || a.length===0) return r; let v = a[0], c = 1; for (let i = 1; i < a.length; i++) { if (a[i] === v) c++; else { r.push(v, c); v = a[i]; c = 1; } } r.push(v, c); return r; }
-        function rleDecode(rle, w, h) { const m = new Uint8Array(w * h); let idx = 0; for (let i = 0; i + 1 < rle.length; i += 2) { const v = rle[i], len = rle[i + 1]; if (v) m.fill(v, idx, idx + len); idx += len; } return m; }
-        function resizeCanvasContainer() { const ws = document.querySelector(".workspace").getBoundingClientRect(); const s = Math.min((ws.width - 40) / state.imageWidth, (ws.height - 350) / state.imageHeight); canvasContainer.style.width = `${Math.round(state.imageWidth * s)}px`; canvasContainer.style.height = `${Math.round(state.imageHeight * s)}px`; }
-        function updateTimelineGUI(f) { $("frameCounter").innerText = `Frame: ${f} / ${state.videoFrameCount - 1}`; }
-        function renderClassList() { classListDiv.innerHTML = ""; Object.keys(state.classes).forEach(cid => { const div = document.createElement("div"); div.className = `class-item ${state.currentClass===parseInt(cid)?'active':''}`; div.innerHTML = `<div class="color-indicator" style="background:${state.classes[cid].color}"></div><span>${state.classes[cid].name}</span>`; div.onclick = () => { state.currentClass = parseInt(cid); renderClassList(); }; classListDiv.appendChild(div); }); }
-        
-        function showToast(m, isError = false) { 
-            const t = $("toast"); 
-            t.innerText = m; 
-            if(isError) t.classList.add("error"); else t.classList.remove("error");
-            t.classList.add("show"); 
-            setTimeout(() => t.classList.remove("show"), 3000); 
-        }
+        // ── 유틸 ─────────────────────────────────────────────────────────
+        function rleEncode(a) { const r=[]; if(!a||!a.length) return r; let v=a[0],c=1; for(let i=1;i<a.length;i++){if(a[i]===v)c++;else{r.push(v,c);v=a[i];c=1;}}r.push(v,c); return r; }
+        function rleDecode(rle,w,h) { const m=new Uint8Array(w*h); let idx=0; for(let i=0;i+1<rle.length;i+=2){const v=rle[i],len=rle[i+1];if(v)m.fill(v,idx,idx+len);idx+=len;} return m; }
+        function resizeCanvasContainer() { const ws=document.querySelector(".workspace").getBoundingClientRect(); const s=Math.min((ws.width-40)/state.imageWidth,(ws.height-350)/state.imageHeight); canvasContainer.style.width=`${Math.round(state.imageWidth*s)}px`; canvasContainer.style.height=`${Math.round(state.imageHeight*s)}px`; }
+        function updateTimelineGUI(f) { $("frameCounter").innerText=`Frame: ${f} / ${state.videoFrameCount-1}`; }
+        function showToast(m,isError=false) { const t=$("toast"); t.innerText=m; if(isError)t.classList.add("error");else t.classList.remove("error"); t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000); }
+
+        // 초기 렌더
+        renderClassList();
+        renderOperatorUI();
     </script>
 </body>
 </html>
