@@ -234,13 +234,17 @@
 
         <div class="control-panel">
             <div class="panel-section-title" style="font-size: 14px; color: var(--text-sub); font-weight: 600; text-transform: uppercase;">Annotation Classes</div>
-            <div class="class-selector-list" id="classList" id="classList"></div>
+            <input type="text" class="class-add-input" id="classSearchInput" placeholder="🔍 Search classes..." style="flex: none; width: 100%; margin-bottom: 2px;">
+            <div class="class-selector-list" id="classList"></div>
             <div class="class-add-row">
                 <input type="color" class="class-color-input" id="newClassColor" value="#ffffff">
                 <input type="text" class="class-add-input" id="newClassName" placeholder="New class name...">
                 <button class="btn" id="addClassBtn" style="padding:5px 10px; font-size:12px;">＋</button>
             </div>
             
+            <div class="panel-section-title" style="font-size: 14px; color: var(--text-sub); font-weight: 600; text-transform: uppercase; margin-top: 10px;">Loaded Instances (this frame)</div>
+            <div class="class-selector-list" id="instanceList" style="max-height: 160px;"></div>
+
             <div class="panel-section-title" style="font-size: 14px; color: var(--text-sub); font-weight: 600; text-transform: uppercase; margin-top: 10px;">Tools & Matrix</div>
             <div class="tool-options">
                 <div style="display:flex; justify-content:space-between; font-size:12px;"><span>Brush Radius</span><span id="brushSizeVal" style="font-weight:bold;">15 px</span></div>
@@ -331,6 +335,7 @@
             currentOperator: "Operator 1",
             classes: withRgb(JSON.parse(JSON.stringify(builtinClasses))),
             classOrder: Object.keys(builtinClasses).map(Number), // 순서 배열
+            classSearchQuery: "",
             bboxStart: null, bboxCurrent: null, isDrawingBbox: false,
             tasksList: [], toolsList: [], csvModified: false, timelineStart: null, timelineEnd: null,
             undoStack: []
@@ -468,10 +473,14 @@
                     if (state.videoPlayMode === "native") {
                         videoPlayer.src = `/api/get_video?path=${encodeURIComponent(state.directory + "/" + vName)}`;
                         videoPlayer.load();
+                        // native <video> only fires "seeked" on a user-initiated seek, so the
+                        // restored frame-0 masks/bboxes would otherwise sit in memory unrendered
+                        // until the user manually moves the timeline once.
+                        videoPlayer.onloadeddata = () => { updateTimelineGUI(0); redrawMasks(); redrawBbox(); renderInstancePanel(); };
                     } else {
                         state.currentFrameIndexFE = 0; seekToFrame(0);
                     }
-                    loadFrameReport(0);
+                    loadFrameReport(0); redrawMasks(); redrawBbox(); renderInstancePanel();
                 }
             } else {
                 videoPlayer.style.display = "none"; imageCanvas.style.display = "block";
@@ -597,11 +606,15 @@
             postJSON("/api/save_classes", { directory: state.directory, classes: { classes: plain, order: state.classOrder } });
         }
 
+        $("classSearchInput").oninput = (e) => { state.classSearchQuery = e.target.value.trim().toLowerCase(); renderClassList(); };
+
         function renderClassList() {
             classListDiv.innerHTML = "";
+            const query = state.classSearchQuery || "";
             state.classOrder.forEach((cidNum, orderIdx) => {
                 const cid = String(cidNum);
                 if (!state.classes[cid]) return;
+                if (query && !state.classes[cid].name.toLowerCase().includes(query)) return;
                 const div = document.createElement("div");
                 div.className = `class-item ${state.currentClass === cidNum ? "active" : ""}`;
                 div.draggable = true;
@@ -913,7 +926,62 @@
 
         // ── Canvas 렌더링 ────────────────────────────────────────────────
         function scheduleRedraw() {
-            if (!isRedrawing) { isRedrawing=true; requestAnimationFrame(()=>{ redrawMasks(); redrawBbox(); isRedrawing=false; }); }
+            if (!isRedrawing) { isRedrawing=true; requestAnimationFrame(()=>{ redrawMasks(); redrawBbox(); renderInstancePanel(); isRedrawing=false; }); }
+        }
+
+        // ── Loaded Instances 패널 (현재 프레임의 bbox/마스크를 클릭으로 삭제) ──
+        function renderInstancePanel() {
+            const div = $("instanceList");
+            if (!div || !state.imageLoaded) return;
+            div.innerHTML = "";
+
+            const isVideo = state.mediaType === "video";
+            const cur = isVideo ? getCurrentFrameIndex() : null;
+            const bboxes = isVideo ? ((state.frameAnnotations[cur] || {}).bboxes || {}) : {};
+            const masks  = isVideo ? ((state.frameAnnotations[cur] || {}).masks  || {}) : state.layers;
+
+            Object.keys(bboxes).forEach(cid => {
+                const cls = state.classes[cid];
+                if (!cls) return;
+                bboxes[cid].forEach((box, i) => {
+                    const row = document.createElement("div");
+                    row.className = "class-item";
+                    row.innerHTML = `<div class="color-indicator" style="background:${cls.color}"></div>
+                        <span style="flex:1; font-size:12px;">📦 ${cls.name} #${box[4] || (i + 1)}</span>
+                        <button class="class-del-btn" title="Delete this bbox instance">✕</button>`;
+                    row.querySelector(".class-del-btn").onclick = (e) => {
+                        e.stopPropagation();
+                        bboxes[cid].splice(i, 1);
+                        if (bboxes[cid].length === 0) delete bboxes[cid];
+                        scheduleRedraw();
+                    };
+                    row.onclick = () => { state.currentClass = parseInt(cid); renderClassList(); };
+                    div.appendChild(row);
+                });
+            });
+
+            Object.keys(masks).forEach(cid => {
+                const layer = masks[cid];
+                const cls = state.classes[cid];
+                if (!cls || !layer || !layer.some(v => v > 0)) return;
+                const row = document.createElement("div");
+                row.className = "class-item";
+                row.innerHTML = `<div class="color-indicator" style="background:${cls.color}"></div>
+                    <span style="flex:1; font-size:12px;">🎨 ${cls.name} (mask)</span>
+                    <button class="class-del-btn" title="Clear this class's mask on this frame">✕</button>`;
+                row.querySelector(".class-del-btn").onclick = (e) => {
+                    e.stopPropagation();
+                    if (!confirm(`Clear "${cls.name}" mask on this frame?`)) return;
+                    layer.fill(0);
+                    scheduleRedraw();
+                };
+                row.onclick = () => { state.currentClass = parseInt(cid); renderClassList(); };
+                div.appendChild(row);
+            });
+
+            if (!div.children.length) {
+                div.innerHTML = `<div style="font-size:12px; color:var(--text-sub); padding:6px;">No instances on this frame yet.</div>`;
+            }
         }
 
         function getActiveMaskLayer(cid) {

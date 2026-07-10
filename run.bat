@@ -208,24 +208,17 @@ if !errorlevel! neq 0 (
 )
 echo.
 
-REM ---- 6. SAM 2 (optional - auto install attempted)
+REM ---- 6. SAM 2 (optional - auto install attempted; PyPI "sam2" package, no Git required)
 "%VENV_PY%" -c "from sam2.build_sam import build_sam2" >nul 2>nul
 set "SAM2_PRESENT=!errorlevel!"
 if !SAM2_PRESENT! equ 0 goto SAM2_OK
 
-echo [INSTALL] SAM 2 not found - attempting install (requires Git)...
-where git >nul 2>nul
-if !errorlevel! neq 0 (
-    echo [WARN] Git not found. SAM 2 requires Git to install.
-    echo   Install Git from https://git-scm.com/ then re-run this script.
-    goto SAM2_DONE
-)
-
-"%VENV_PY%" -m pip install "git+https://github.com/facebookresearch/sam2.git" -q
+echo [INSTALL] SAM 2 not found - installing from PyPI...
+"%VENV_PY%" -m pip install sam2 -q
 set "SAM2_ERR=!errorlevel!"
 if !SAM2_ERR! neq 0 (
     echo [WARN] SAM 2 install failed. AI mask propagation will be disabled.
-    echo   Retry manually: "%VENV_PY%" -m pip install git+https://github.com/facebookresearch/sam2.git
+    echo   Retry manually: "%VENV_PY%" -m pip install sam2
     goto SAM2_DONE
 )
 echo [OK] SAM 2 installed.

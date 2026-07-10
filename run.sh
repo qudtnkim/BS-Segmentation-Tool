@@ -65,12 +65,17 @@ else
     echo "[OK] Whisper already available."
 fi
 
-# ---- 6. SAM 2 (optional, heavy)
+# ---- 6. SAM 2 (optional - auto install attempted; PyPI "sam2" package, no Git required)
 if ! "$VENV_PY" -c "from sam2.build_sam import build_sam2" >/dev/null 2>&1; then
-    echo "[INFO] SAM 2 not installed. AI-assisted mask propagation disabled."
-    echo "  Optional manual install: \"$VENV_PY\" -m pip install \"git+https://github.com/facebookresearch/sam2.git\""
+    echo "[INSTALL] SAM 2 not found - installing from PyPI..."
+    if "$VENV_PY" -m pip install sam2 -q; then
+        echo "[OK] SAM 2 installed."
+    else
+        echo "[WARN] SAM 2 install failed. AI mask propagation will be disabled."
+        echo "  Retry manually: \"$VENV_PY\" -m pip install sam2"
+    fi
 else
-    echo "[OK] SAM 2 available."
+    echo "[OK] SAM 2 already available."
 fi
 
 echo

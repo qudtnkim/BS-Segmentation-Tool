@@ -17,3 +17,15 @@ venv/
 
 # Generated exports
 *.xlsx
+
+
+.venv/
+__pycache__/
+*.pyc
+sam2_hiera_tiny.pt
+temp_voice.webm
+*.xlsx
+classes.json
+*_mask.json
+*_coco.json
+*_reports.json

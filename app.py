@@ -530,6 +530,23 @@ def sam_refine():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@app.route('/api/load_phases', methods=['POST'])
+def load_phases():
+    data = request.json or {}
+    phases = load_json(annotation_path(data, "_phases.json", "image_phases.json"), default={})
+    return jsonify({"success": True, "phases": phases})
+
+
+@app.route('/api/save_phases', methods=['POST'])
+def save_phases():
+    data = request.json or {}
+    try:
+        dump_json(annotation_path(data, "_phases.json", "image_phases.json"), data.get('phases', {}))
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route('/api/load_classes', methods=['POST'])
 def load_classes():
     data = request.json or {}
