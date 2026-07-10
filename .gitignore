@@ -6,6 +6,7 @@
 # Generated Data
 *_reports.json
 *_coco.json
+*_phases.json
 *.csv
 temp_voice.webm
 

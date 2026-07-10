@@ -25,8 +25,11 @@
         .image-list { flex: 1; overflow-y: auto; padding: 10px; }
         .image-item { padding: 10px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
         .image-item.active { background: rgba(99, 102, 241, 0.2); border: 1px solid var(--accent-color); }
-        .workspace { flex: 1; background-color: var(--bg-color); display: flex; flex-direction: column; align-items: center; padding: 15px; overflow-y: auto; }
-        .canvas-container { position: relative; background-color: #000; border: 1px solid var(--border-color); margin-bottom: 10px; flex-shrink: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .workspace { flex: 1; background-color: var(--bg-color); display: flex; flex-direction: column; align-items: center; padding: 15px; overflow: auto; }
+        .canvas-viewport { width: 100%; display: flex; justify-content: center; overflow: auto; margin-bottom: 10px; }
+        .canvas-container { position: relative; background-color: #000; border: 1px solid var(--border-color); flex-shrink: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .zoom-badge { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.55); color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 11px; pointer-events: none; user-select: none; opacity: 0; transition: opacity 0.3s; z-index: 5; }
+        .zoom-badge.show { opacity: 1; }
         #videoPlayer, #imageCanvas, #maskCanvas, #bboxCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         #maskCanvas { z-index: 2; cursor: crosshair; } #bboxCanvas { z-index: 3; pointer-events: none; }
         
@@ -95,6 +98,24 @@
         .class-color-input { width: 34px; height: 30px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); cursor: pointer; padding: 2px; }
         .step-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
         .step-input { width: 56px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 8px; color: #fff; font-size: 12px; outline: none; text-align: center; }
+
+        .phase-modal { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; width: 780px; max-width: 95vw; max-height: 85vh; display: flex; flex-direction: column; padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .phase-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .phase-modal-title { font-size: 16px; font-weight: 600; color: #a5b4fc; }
+        .phase-modal-hint  { font-size: 11px; color: var(--text-sub); margin-top: 4px; }
+        .phase-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; overflow-y: auto; padding: 4px; }
+        .phase-col { background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .phase-col-header { font-size: 13px; font-weight: 600; color: #fff; padding-bottom: 6px; border-bottom: 1px solid var(--border-color); text-align: center; }
+        .phase-sub { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; color: var(--text-main); user-select: none; }
+        .phase-sub:hover { background: rgba(99,102,241,0.12); }
+        .phase-sub input { accent-color: var(--accent-color); cursor: pointer; }
+        .phase-sub.checked { background: rgba(99,102,241,0.22); color: #fff; }
+        .phase-modal-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color); }
+        .phase-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .phase-chip { background: rgba(99,102,241,0.2); border: 1px solid var(--accent-color); border-radius: 12px; padding: 3px 10px; font-size: 11px; color: #a5b4fc; }
+        .phase-chip.inherited { background: rgba(148,163,184,0.15); border-color: var(--border-color); color: var(--text-sub); }
+        .phase-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.55); color: #a5b4fc; padding: 4px 10px; border-radius: 4px; font-size: 11px; pointer-events: none; user-select: none; z-index: 5; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .phase-badge.empty { color: var(--text-sub); font-style: italic; }
     </style>
 </head>
 <body>
@@ -120,17 +141,24 @@
         </div>
 
         <div class="workspace">
-            <div class="canvas-container" id="canvasContainer">
-                <video id="videoPlayer" preload="auto" playsinline style="display: none; pointer-events: none;"></video>
-                <canvas id="imageCanvas"></canvas>
-                <canvas id="maskCanvas"></canvas>
-                <canvas id="bboxCanvas"></canvas>
+            <div class="canvas-viewport" id="canvasViewport">
+                <div class="canvas-container" id="canvasContainer">
+                    <video id="videoPlayer" preload="auto" playsinline style="display: none; pointer-events: none;"></video>
+                    <canvas id="imageCanvas"></canvas>
+                    <canvas id="maskCanvas"></canvas>
+                    <canvas id="bboxCanvas"></canvas>
+                    <div class="zoom-badge" id="zoomBadge">100%</div>
+                    <div class="phase-badge empty" id="phaseBadge">No phase set</div>
+                </div>
             </div>
 
             <div class="diagnostic-report-panel">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:6px;">
                     <span style="font-size: 13px; font-weight:600; color: #a5b4fc;">📝 Frame Description / Clinical Log</span>
-                    <button class="btn btn-sm" id="exportExcelBtn" style="padding:6px 12px; font-size:12px; background:#10b981; border-radius:4px;">📊 Export Excel</button>
+                    <div style="display:flex; gap:6px;">
+                        <button class="btn btn-sm" id="openPhaseBtn" style="padding:6px 12px; font-size:12px; background:var(--accent-color); border-radius:4px;">🏥 Phase</button>
+                        <button class="btn btn-sm" id="exportExcelBtn" style="padding:6px 12px; font-size:12px; background:#10b981; border-radius:4px;">📊 Export Excel</button>
+                    </div>
                 </div>
                 <div class="operator-row">
                     <select class="operator-select" id="operatorSelect"></select>
@@ -284,6 +312,23 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="phaseModal">
+        <div class="phase-modal">
+            <div class="phase-modal-header">
+                <div>
+                    <div class="phase-modal-title">🏥 Surgical Phase Annotation</div>
+                    <div class="phase-modal-hint">Multi-select. Selection auto-carries to subsequent frames until you change it again. Ctrl+P also opens/closes this.</div>
+                </div>
+                <button class="btn btn-sec" id="clearPhaseBtn" style="padding:6px 12px; font-size:12px; border-color:var(--danger-color); color:var(--danger-color);">Clear this frame</button>
+            </div>
+            <div class="phase-grid" id="phaseGrid"></div>
+            <div class="phase-modal-footer">
+                <div class="phase-chips" id="phaseChipRow"></div>
+                <button class="btn" id="closePhaseBtn" style="background:#10b981;">Done</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const $ = (id) => document.getElementById(id);
         async function postJSON(url, body) {
@@ -336,6 +381,18 @@
             classes: withRgb(JSON.parse(JSON.stringify(builtinClasses))),
             classOrder: Object.keys(builtinClasses).map(Number), // 순서 배열
             classSearchQuery: "",
+            zoomFactor: 1,
+            // Phase 1-5, each with 3 sub-phases (extensible via phases.json's "definitions" field)
+            phaseDefinitions: {
+                1: { name: "Phase 1", sub: { "1-1": "1-1", "1-2": "1-2", "1-3": "1-3" } },
+                2: { name: "Phase 2", sub: { "2-1": "2-1", "2-2": "2-2", "2-3": "2-3" } },
+                3: { name: "Phase 3", sub: { "3-1": "3-1", "3-2": "3-2", "3-3": "3-3" } },
+                4: { name: "Phase 4", sub: { "4-1": "4-1", "4-2": "4-2", "4-3": "4-3" } },
+                5: { name: "Phase 5", sub: { "5-1": "5-1", "5-2": "5-2", "5-3": "5-3" } },
+            },
+            // Sparse map: only frames where the phase selection CHANGES from the prior state.
+            // Effective phase at frame N = the nearest key ≤ N. This is what "carry-forward" means.
+            framePhases: {},
             bboxStart: null, bboxCurrent: null, isDrawingBbox: false,
             tasksList: [], toolsList: [], csvModified: false, timelineStart: null, timelineEnd: null,
             undoStack: []
@@ -427,6 +484,8 @@
             state.mediaType = type; state.currentIndex = idx;
             state.undoStack = [];
             renderFileList();
+
+            await loadPhasesFromServer(type === "video" ? state.videos[idx] : "");
 
             const repRes = await postJSON("/api/load_reports", { directory: state.directory, video_name: type === "video" ? state.videos[idx] : "" });
             // 레거시 flat 포맷 → 첫 operator로 마이그레이션
@@ -563,6 +622,7 @@
             activeReportFrame = fIdx;
             const opData = state.reports[state.currentOperator] || {};
             frameReportTextarea.value = opData[String(fIdx)] || "";
+            updatePhaseBadge(fIdx);
         }
 
         function saveCurrentFrameReport(fIdx) {
@@ -582,6 +642,134 @@
             if (activeReportFrame === -1) return;
             if (!state.reports[state.currentOperator]) state.reports[state.currentOperator] = {};
             state.reports[state.currentOperator][String(activeReportFrame)] = e.target.value;
+        };
+
+        // ── Surgical Phase annotation ─────────────────────────────────────
+        // Data model: sparse "key-frame" map. When user picks a phase on frame N
+        // and never changes it again, frames N..end all inherit that value.
+        function getEffectivePhases(frameIdx) {
+            const keys = Object.keys(state.framePhases).map(Number).sort((a,b) => a-b);
+            let best = -1;
+            for (const k of keys) { if (k <= frameIdx) best = k; else break; }
+            if (best === -1) return { phases: [], inherited: false, sourceFrame: null };
+            return { phases: state.framePhases[best].slice(), inherited: best !== frameIdx, sourceFrame: best };
+        }
+
+        function updatePhaseBadge(frameIdx) {
+            const badge = $("phaseBadge");
+            if (!badge) return;
+            const eff = getEffectivePhases(frameIdx);
+            if (eff.phases.length === 0) {
+                badge.innerText = "No phase set";
+                badge.classList.add("empty");
+                return;
+            }
+            badge.classList.remove("empty");
+            const label = eff.phases.join(", ");
+            badge.innerText = eff.inherited
+                ? `🏥 ${label}  ⟵ frame ${eff.sourceFrame}`
+                : `🏥 ${label}`;
+        }
+
+        function currentPhaseFrame() {
+            return state.mediaType === "video" ? getCurrentFrameIndex() : 0;
+        }
+
+        async function savePhasesToServer() {
+            if (!state.directory) return;
+            const vidName = state.mediaType === "video" ? state.videos[state.currentIndex] : "";
+            const payload = {
+                directory: state.directory,
+                video_name: vidName,
+                phases: {
+                    // Only serialize sparse keyframes; effective phase at any frame is derived.
+                    frames: state.framePhases,
+                    definitions: state.phaseDefinitions,
+                },
+            };
+            await postJSON("/api/save_phases", payload);
+        }
+
+        async function loadPhasesFromServer(vidName) {
+            const res = await postJSON("/api/load_phases", { directory: state.directory, video_name: vidName || "" });
+            const data = res && res.phases ? res.phases : {};
+            state.framePhases = (data && data.frames) ? data.frames : {};
+            if (data && data.definitions && typeof data.definitions === "object" && Object.keys(data.definitions).length > 0) {
+                state.phaseDefinitions = data.definitions;
+            }
+        }
+
+        function renderPhaseGrid() {
+            const grid = $("phaseGrid");
+            const chipRow = $("phaseChipRow");
+            grid.innerHTML = "";
+            const curFrame = currentPhaseFrame();
+            const currentSelection = new Set((state.framePhases[curFrame] || getEffectivePhases(curFrame).phases));
+
+            Object.keys(state.phaseDefinitions).forEach(topKey => {
+                const p = state.phaseDefinitions[topKey];
+                const col = document.createElement("div");
+                col.className = "phase-col";
+                const header = document.createElement("div");
+                header.className = "phase-col-header";
+                header.innerText = p.name || `Phase ${topKey}`;
+                col.appendChild(header);
+                Object.keys(p.sub || {}).forEach(subKey => {
+                    const label = p.sub[subKey];
+                    const isChecked = currentSelection.has(subKey);
+                    const row = document.createElement("label");
+                    row.className = "phase-sub" + (isChecked ? " checked" : "");
+                    row.innerHTML = `<input type="checkbox" ${isChecked ? "checked" : ""}><span>${subKey}  ${label && label !== subKey ? "· " + label : ""}</span>`;
+                    row.querySelector("input").onchange = (e) => {
+                        const set = new Set((state.framePhases[curFrame] || getEffectivePhases(curFrame).phases));
+                        if (e.target.checked) set.add(subKey); else set.delete(subKey);
+                        // Only write a keyframe if the new selection differs from what would be inherited.
+                        const inheritedNow = new Set(getEffectivePhases(curFrame - 1).phases);
+                        const newArr = Array.from(set).sort();
+                        const sameAsInherited = newArr.length === inheritedNow.size && newArr.every(v => inheritedNow.has(v));
+                        if (sameAsInherited) delete state.framePhases[curFrame];
+                        else state.framePhases[curFrame] = newArr;
+                        savePhasesToServer();
+                        renderPhaseGrid();
+                        updatePhaseBadge(curFrame);
+                    };
+                    col.appendChild(row);
+                });
+                grid.appendChild(col);
+            });
+
+            chipRow.innerHTML = "";
+            const eff = getEffectivePhases(curFrame);
+            eff.phases.forEach(p => {
+                const c = document.createElement("span");
+                c.className = "phase-chip" + (eff.inherited ? " inherited" : "");
+                c.innerText = p;
+                chipRow.appendChild(c);
+            });
+            if (eff.phases.length === 0) {
+                const c = document.createElement("span");
+                c.className = "phase-chip inherited";
+                c.innerText = "(nothing set yet — select to begin)";
+                chipRow.appendChild(c);
+            }
+        }
+
+        function openPhaseModal() {
+            if (!state.imageLoaded) { showToast("Load a video/image first", true); return; }
+            renderPhaseGrid();
+            $("phaseModal").classList.add("show");
+        }
+        function closePhaseModal() { $("phaseModal").classList.remove("show"); }
+
+        $("openPhaseBtn").onclick = openPhaseModal;
+        $("closePhaseBtn").onclick = closePhaseModal;
+        $("phaseModal").onclick = (e) => { if (e.target.id === "phaseModal") closePhaseModal(); };
+        $("clearPhaseBtn").onclick = () => {
+            const curFrame = currentPhaseFrame();
+            delete state.framePhases[curFrame];
+            savePhasesToServer();
+            renderPhaseGrid();
+            updatePhaseBadge(curFrame);
         };
 
         $("exportExcelBtn").onclick = async () => {
@@ -1153,8 +1341,15 @@
         // ── 키보드 단축키 ────────────────────────────────────────────────
         document.addEventListener("keydown", (e) => {
             const tag = document.activeElement.tagName;
-            if (tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
             const key=e.key.toLowerCase();
+            // Ctrl+P: toggle phase popup (works even from inputs)
+            if ((e.ctrlKey||e.metaKey) && key==="p") {
+                e.preventDefault();
+                if ($("phaseModal").classList.contains("show")) closePhaseModal();
+                else openPhaseModal();
+                return;
+            }
+            if (tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
             if ((e.ctrlKey||e.metaKey)&&key==="z") { e.preventDefault(); performUndo(); return; }
             if (key==="a") changeFrame(-1);
             if (key==="d") changeFrame(1);
@@ -1166,7 +1361,58 @@
         // ── 유틸 ─────────────────────────────────────────────────────────
         function rleEncode(a) { const r=[]; if(!a||!a.length) return r; let v=a[0],c=1; for(let i=1;i<a.length;i++){if(a[i]===v)c++;else{r.push(v,c);v=a[i];c=1;}}r.push(v,c); return r; }
         function rleDecode(rle,w,h) { const m=new Uint8Array(w*h); let idx=0; for(let i=0;i+1<rle.length;i+=2){const v=rle[i],len=rle[i+1];if(v)m.fill(v,idx,idx+len);idx+=len;} return m; }
-        function resizeCanvasContainer() { const ws=document.querySelector(".workspace").getBoundingClientRect(); const s=Math.min((ws.width-40)/state.imageWidth,(ws.height-350)/state.imageHeight); canvasContainer.style.width=`${Math.round(state.imageWidth*s)}px`; canvasContainer.style.height=`${Math.round(state.imageHeight*s)}px`; }
+        function resizeCanvasContainer() {
+            const ws = document.querySelector(".workspace").getBoundingClientRect();
+            // Fit-to-view baseline scale, then apply the user's zoom factor on top of it.
+            const fit = Math.min((ws.width - 40) / state.imageWidth, (ws.height - 350) / state.imageHeight);
+            const s = Math.max(0.05, fit * (state.zoomFactor || 1));
+            canvasContainer.style.width  = `${Math.round(state.imageWidth  * s)}px`;
+            canvasContainer.style.height = `${Math.round(state.imageHeight * s)}px`;
+            const badge = $("zoomBadge");
+            if (badge) badge.innerText = `${Math.round((state.zoomFactor || 1) * 100)}%`;
+        }
+
+        // Ctrl + wheel: zoom the canvas around the cursor. The workspace/viewport
+        // auto-scroll when the container overflows.
+        (function setupZoom() {
+            const viewport = $("canvasViewport");
+            let zoomBadgeTimer = null;
+            const applyZoom = (nextZoom, anchorClientX, anchorClientY) => {
+                if (!state.imageLoaded) return;
+                const prev = state.zoomFactor || 1;
+                nextZoom = Math.max(0.2, Math.min(8, nextZoom));
+                if (Math.abs(nextZoom - prev) < 0.001) return;
+                // Keep the point under the cursor stable
+                const rect = canvasContainer.getBoundingClientRect();
+                const relX = (anchorClientX - rect.left) / rect.width;
+                const relY = (anchorClientY - rect.top)  / rect.height;
+                state.zoomFactor = nextZoom;
+                resizeCanvasContainer();
+                requestAnimationFrame(() => {
+                    const newRect = canvasContainer.getBoundingClientRect();
+                    const targetX = newRect.left + relX * newRect.width;
+                    const targetY = newRect.top  + relY * newRect.height;
+                    const ws = document.querySelector(".workspace");
+                    ws.scrollLeft       += (targetX - anchorClientX);
+                    viewport.scrollLeft += (targetX - anchorClientX);
+                    ws.scrollTop        += (targetY - anchorClientY);
+                });
+                const badge = $("zoomBadge");
+                badge.classList.add("show");
+                clearTimeout(zoomBadgeTimer);
+                zoomBadgeTimer = setTimeout(() => badge.classList.remove("show"), 1200);
+            };
+            viewport.addEventListener("wheel", (e) => {
+                if (!e.ctrlKey && !e.metaKey) return;
+                e.preventDefault();
+                const step = e.deltaY < 0 ? 1.15 : (1 / 1.15);
+                applyZoom((state.zoomFactor || 1) * step, e.clientX, e.clientY);
+            }, { passive: false });
+            document.addEventListener("keydown", (e) => {
+                if (!(e.ctrlKey || e.metaKey)) return;
+                if (e.key === "0") { e.preventDefault(); state.zoomFactor = 1; resizeCanvasContainer(); $("zoomBadge").classList.add("show"); clearTimeout(zoomBadgeTimer); zoomBadgeTimer = setTimeout(() => $("zoomBadge").classList.remove("show"), 1200); }
+            });
+        })();
         function updateTimelineGUI(f) { $("frameCounter").innerText=`Frame: ${f} / ${state.videoFrameCount-1}`; }
         function showToast(m,isError=false) { const t=$("toast"); t.innerText=m; if(isError)t.classList.add("error");else t.classList.remove("error"); t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000); }
 
