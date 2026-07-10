@@ -16,6 +16,11 @@ __pycache__/
 .venv/
 venv/
 
+# Editor / IDE / assistant configs
+.claude/
+.vscode/
+.idea/
+
 # Generated exports
 *.xlsx
 
