@@ -103,10 +103,11 @@
         .phase-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
         .phase-modal-title { font-size: 16px; font-weight: 600; color: #a5b4fc; }
         .phase-modal-hint  { font-size: 11px; color: var(--text-sub); margin-top: 4px; }
-        .phase-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; overflow-y: auto; padding: 4px; }
-        .phase-col { background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-        .phase-col-header { font-size: 13px; font-weight: 600; color: #fff; padding-bottom: 6px; border-bottom: 1px solid var(--border-color); text-align: center; }
-        .phase-sub { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; color: var(--text-main); user-select: none; }
+        .phase-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; overflow-y: auto; padding: 4px; min-height: 0; }
+        .phase-col { background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 4px; max-height: 62vh; }
+        .phase-col-header { padding-bottom: 6px; border-bottom: 1px solid var(--border-color); text-align: center; flex-shrink: 0; }
+        .phase-col-body { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 2px; }
+        .phase-sub { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; color: var(--text-main); user-select: none; }
         .phase-sub:hover { background: rgba(99,102,241,0.12); }
         .phase-sub input { accent-color: var(--accent-color); cursor: pointer; }
         .phase-sub.checked { background: rgba(99,102,241,0.22); color: #fff; }
@@ -382,13 +383,91 @@
             classOrder: Object.keys(builtinClasses).map(Number), // 순서 배열
             classSearchQuery: "",
             zoomFactor: 1,
-            // Phase 1-5, each with 3 sub-phases (extensible via phases.json's "definitions" field)
+            // Gastric surgery phase taxonomy. Sub keys are the abbreviations that get
+            // saved to JSON; `full` is the tooltip. Order is preserved by insertion.
             phaseDefinitions: {
-                1: { name: "Phase 1", sub: { "1-1": "1-1", "1-2": "1-2", "1-3": "1-3" } },
-                2: { name: "Phase 2", sub: { "2-1": "2-1", "2-2": "2-2", "2-3": "2-3" } },
-                3: { name: "Phase 3", sub: { "3-1": "3-1", "3-2": "3-2", "3-3": "3-3" } },
-                4: { name: "Phase 4", sub: { "4-1": "4-1", "4-2": "4-2", "4-3": "4-3" } },
-                5: { name: "Phase 5", sub: { "5-1": "5-1", "5-2": "5-2", "5-3": "5-3" } },
+                1: {
+                    name: "LND", full: "Lymph Node Dissection",
+                    sub: {
+                        "PO":      { full: "Partial Omentectomy" },
+                        "TO":      { full: "Total Omentectomy" },
+                        "1 LND":   { full: "Left paracardial LND" },
+                        "2 LND":   { full: "Right paracardial LND" },
+                        "3a LND":  { full: "Lesser curvature LND (3a)" },
+                        "3b LND":  { full: "Lesser curvature LND (3b)" },
+                        "4sa LND": { full: "Left greater curvature LND (short gastric artery)" },
+                        "4sb LND": { full: "Left greater curvature LND (left gastroepiploic artery)" },
+                        "4d LND":  { full: "Left greater curvature LND (right gastroepiploic artery)" },
+                        "5 LND":   { full: "Supraduodenal LND" },
+                        "6 LND":   { full: "Infrapyloric LND" },
+                        "7 LND":   { full: "Left gastric LND" },
+                        "8a LND":  { full: "Common hepatic LND" },
+                        "9 LND":   { full: "Celiac LND" },
+                        "10 LND":  { full: "Splenic hilar LND" },
+                        "11p LND": { full: "Proximal splenic LND" },
+                        "11d LND": { full: "Distal splenic LND" },
+                        "12a LND": { full: "Hepatoduodenal LND (12a)" },
+                        "12b LND": { full: "Hepatoduodenal LND (12b)" },
+                        "12p LND": { full: "Hepatoduodenal LND (12p)" },
+                        "13":      { full: "Posterior surface of Pancreatic head LND" },
+                        "14v":     { full: "Superior Mesenteric Vein LND" },
+                        "15":      { full: "Middle colic vessels LND" },
+                        "16a1":    { full: "Paraaortic LND (Diaphragmatic Aortic Hiatus)" },
+                        "16a2":    { full: "Paraaortic LND (Celiac artery - Left renal vein)" },
+                        "16b1":    { full: "Paraaortic LND (Left renal vein - Inferior mesenteric artery)" },
+                        "16b2":    { full: "Paraaortic LND (Left renal vein - Inferior mesenteric artery)" },
+                    }
+                },
+                2: {
+                    name: "VL", full: "Vessel Ligation",
+                    sub: {
+                        "LGEV": { full: "Left Gastro Epiploic Vessel Ligation" },
+                        "RGEV": { full: "Right Gastro Epiploic Vessel Ligation" },
+                        "RGV":  { full: "Right Gastric Vessel Ligation" },
+                        "LGV":  { full: "Left Gastric Vessel Ligation" },
+                        "SGV":  { full: "Short Gastric Vessel Ligation" },
+                        "PGV":  { full: "Posterior Gastric Vessel Ligation" },
+                        "RCV":  { full: "Right Colic Vessel Ligation" },
+                        "MCV":  { full: "Middle Colic Vessel Ligation" },
+                    }
+                },
+                3: {
+                    name: "OT", full: "Organ Transection",
+                    sub: {
+                        "DT": { full: "Duodenum Transection" },
+                        "ST": { full: "Stomach Transection" },
+                        "ET": { full: "Esophagus Transection" },
+                        "JT": { full: "Jejunum Transection" },
+                        "CT": { full: "Colon Transection" },
+                        "LN": { full: "Lymph Node" },
+                    }
+                },
+                4: {
+                    name: "OR", full: "Organ Reconstruction",
+                    sub: {
+                        "GJ": { full: "GastroJejunostomy" },
+                        "GD": { full: "GastroDuodenostomy" },
+                        "EJ": { full: "EsophagoJejunostomy" },
+                        "JJ": { full: "JejunoJejunostomy" },
+                        "EG": { full: "EsophagoGastrostomy" },
+                    }
+                },
+                5: {
+                    name: "Etc", full: "Miscellaneous",
+                    sub: {
+                        "TP":  { full: "Trocar Placement" },
+                        "PE":  { full: "Peritoneal Exploration" },
+                        "WC":  { full: "Washing Cytology" },
+                        "MDC": { full: "Mesenteric Defect Closure" },
+                        "LT":  { full: "Liver Traction" },
+                        "GI":  { full: "Gauze Insertion" },
+                        "GR":  { full: "Gauze Retrieval" },
+                        "BC":  { full: "Bleeding Control" },
+                        "Irr": { full: "Irrigation" },
+                        "SR":  { full: "Specimen Removal" },
+                        "DI":  { full: "Drain Insertion" },
+                    }
+                },
             },
             // Sparse map: only frames where the phase selection CHANGES from the prior state.
             // Effective phase at frame N = the nearest key ≤ N. This is what "carry-forward" means.
@@ -682,9 +761,9 @@
                 directory: state.directory,
                 video_name: vidName,
                 phases: {
-                    // Only serialize sparse keyframes; effective phase at any frame is derived.
+                    // Only serialize sparse keyframes. Definitions live in code so all
+                    // annotators see the same taxonomy without importing per-video JSON.
                     frames: state.framePhases,
-                    definitions: state.phaseDefinitions,
                 },
             };
             await postJSON("/api/save_phases", payload);
@@ -694,9 +773,8 @@
             const res = await postJSON("/api/load_phases", { directory: state.directory, video_name: vidName || "" });
             const data = res && res.phases ? res.phases : {};
             state.framePhases = (data && data.frames) ? data.frames : {};
-            if (data && data.definitions && typeof data.definitions === "object" && Object.keys(data.definitions).length > 0) {
-                state.phaseDefinitions = data.definitions;
-            }
+            // Intentionally ignore any legacy `definitions` field in old JSON files -
+            // the fixed surgical taxonomy comes from code.
         }
 
         function renderPhaseGrid() {
@@ -712,14 +790,20 @@
                 col.className = "phase-col";
                 const header = document.createElement("div");
                 header.className = "phase-col-header";
-                header.innerText = p.name || `Phase ${topKey}`;
+                header.innerHTML = `<div style="font-size:15px; font-weight:700; color:#a5b4fc;">${p.name || 'Phase ' + topKey}</div>` +
+                    (p.full ? `<div style="font-size:10px; color:var(--text-sub); margin-top:2px; font-weight:400;">${p.full}</div>` : "");
                 col.appendChild(header);
+                const body = document.createElement("div");
+                body.className = "phase-col-body";
+                col.appendChild(body);
                 Object.keys(p.sub || {}).forEach(subKey => {
-                    const label = p.sub[subKey];
+                    const entry = p.sub[subKey];
+                    const fullLabel = (entry && typeof entry === "object") ? (entry.full || "") : (entry || "");
                     const isChecked = currentSelection.has(subKey);
                     const row = document.createElement("label");
                     row.className = "phase-sub" + (isChecked ? " checked" : "");
-                    row.innerHTML = `<input type="checkbox" ${isChecked ? "checked" : ""}><span>${subKey}  ${label && label !== subKey ? "· " + label : ""}</span>`;
+                    row.title = fullLabel;   // native browser tooltip on hover
+                    row.innerHTML = `<input type="checkbox" ${isChecked ? "checked" : ""}><span>${subKey}</span>`;
                     row.querySelector("input").onchange = (e) => {
                         const set = new Set((state.framePhases[curFrame] || getEffectivePhases(curFrame).phases));
                         if (e.target.checked) set.add(subKey); else set.delete(subKey);
@@ -733,7 +817,7 @@
                         renderPhaseGrid();
                         updatePhaseBadge(curFrame);
                     };
-                    col.appendChild(row);
+                    body.appendChild(row);
                 });
                 grid.appendChild(col);
             });
