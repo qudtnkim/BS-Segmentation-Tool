@@ -664,8 +664,19 @@
             const clsRes = await postJSON("/api/load_classes", { directory: state.directory });
             if (clsRes.success && clsRes.classes) {
                 const loaded = clsRes.classes;
-                state.classes = withRgb(loaded.classes || loaded);
-                state.classOrder = (loaded.order || Object.keys(state.classes).map(Number)).map(Number);
+                const clsMap = loaded.classes || loaded;
+                // Legacy detection: pre-tab data has no `sheet` field on any entry.
+                // We ignore it and fall through to the code-defined Laparoscopic/Robotic taxonomy,
+                // so old NAS folders auto-migrate without manual cleanup.
+                const isLegacy = clsMap && typeof clsMap === "object" &&
+                    Object.values(clsMap).length > 0 &&
+                    Object.values(clsMap).every(c => !c || !c.sheet);
+                if (!isLegacy) {
+                    state.classes = withRgb(clsMap);
+                    state.classOrder = (loaded.order || Object.keys(state.classes).map(Number)).map(Number);
+                } else {
+                    console.info("[classes] Legacy classes.json detected (no sheet field). Using built-in Laparoscopic/Robotic defaults instead.");
+                }
             }
             renderFileList();
             if (res.videos.length > 0) selectFile(0, "video");
