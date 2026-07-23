@@ -12,23 +12,23 @@
             --danger-color: #ef4444; --danger-hover: #f87171;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body { background-color: var(--bg-color); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-size: 14px; }
         header { background: #161925; border-bottom: 1px solid var(--border-color); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; height: 70px; }
-        .logo-section h1 { font-size: 20px; font-weight: 600; color: #6366f1; }
+        .logo-section h1 { font-size: 22px; font-weight: 600; color: #6366f1; }
         .dir-input-container { display: flex; gap: 8px; width: 60%; }
-        .dir-input { flex-grow: 1; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; color: #fff; outline: none; }
-        .btn { background: var(--accent-color); color: white; border: none; border-radius: 8px; padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; font-size: 13px; font-weight: 500;}
+        .dir-input { flex-grow: 1; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; color: #fff; outline: none; font-size: 14px; }
+        .btn { background: var(--accent-color); color: white; border: none; border-radius: 8px; padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; font-size: 14px; font-weight: 500;}
         .btn:hover { background: var(--accent-hover); }
         .btn-sec { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); }
         .main-container { display: flex; flex: 1; height: calc(100vh - 70px); overflow: hidden; }
-        .sidebar { width: 260px; background-color: var(--panel-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
+        .sidebar { width: 280px; background-color: var(--panel-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
         .image-list { flex: 1; overflow-y: auto; padding: 10px; }
-        .image-item { padding: 10px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+        .image-item { padding: 10px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
         .image-item.active { background: rgba(99, 102, 241, 0.2); border: 1px solid var(--accent-color); }
         .workspace { flex: 1; background-color: var(--bg-color); display: flex; flex-direction: column; align-items: center; padding: 15px; overflow: auto; }
         .canvas-viewport { width: 100%; display: flex; justify-content: center; overflow: auto; margin-bottom: 10px; }
         .canvas-container { position: relative; background-color: #000; border: 1px solid var(--border-color); flex-shrink: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        .zoom-badge { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.55); color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 11px; pointer-events: none; user-select: none; opacity: 0; transition: opacity 0.3s; z-index: 5; }
+        .zoom-badge { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.55); color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 13px; pointer-events: none; user-select: none; opacity: 0; transition: opacity 0.3s; z-index: 5; }
         .zoom-badge.show { opacity: 1; }
         #videoPlayer, #imageCanvas, #maskCanvas, #bboxCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         #maskCanvas { z-index: 2; cursor: crosshair; } #bboxCanvas { z-index: 3; pointer-events: none; }
@@ -41,35 +41,35 @@
         @keyframes blink { 0% { opacity:1; } 50% { opacity:0.5; } 100% { opacity:1; } }
 
         .collapsible-details { width: 100%; max-width: 900px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
-        .collapsible-summary { padding: 10px; font-size: 13px; cursor: pointer; color: var(--text-sub); background: rgba(25, 29, 45, 0.5); font-weight: 500; }
+        .collapsible-summary { padding: 12px; font-size: 14px; cursor: pointer; color: var(--text-sub); background: rgba(25, 29, 45, 0.5); font-weight: 500; }
         .collapsible-content { padding: 10px; }
-        
+
         .csv-tabs { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 15px; gap: 5px; }
-        .csv-tab { background: transparent; border: none; color: var(--text-sub); padding: 8px 16px; cursor: pointer; font-size: 13px; border-bottom: 2px solid transparent; }
+        .csv-tab { background: transparent; border: none; color: var(--text-sub); padding: 8px 16px; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; }
         .csv-tab.active { color: var(--accent-hover); border-bottom-color: var(--accent-color); font-weight: 600; }
         .csv-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
         .csv-form-group { display: flex; flex-direction: column; gap: 5px; }
-        .csv-form-group label { font-size: 11px; color: var(--text-sub); }
-        .csv-input, .csv-select { background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; color: var(--text-main); font-size: 12px; outline: none; }
+        .csv-form-group label { font-size: 12px; color: var(--text-sub); }
+        .csv-input, .csv-select { background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 12px; color: var(--text-main); font-size: 13px; outline: none; }
         .csv-table-container { max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; margin-top: 15px; }
-        .csv-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+        .csv-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
         .csv-table th { background-color: var(--input-bg); padding: 8px 10px; color: var(--text-sub); position: sticky; top: 0; }
         .csv-table td { padding: 6px 10px; border-bottom: 1px solid var(--border-color); color: var(--text-main); }
-        .csv-btn-del { background: transparent; border: 1px solid var(--danger-color); border-radius: 4px; padding: 2px 6px; color: var(--danger-color); cursor: pointer; font-size: 11px; }
+        .csv-btn-del { background: transparent; border: 1px solid var(--danger-color); border-radius: 4px; padding: 3px 8px; color: var(--danger-color); cursor: pointer; font-size: 12px; }
         .csv-btn-del:hover { background: var(--danger-color); color: white; }
 
-        .control-panel { width: 340px; background: var(--panel-bg); border-left: 1px solid var(--border-color); padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
-        .class-selector-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
-        .class-item { display: flex; align-items: center; padding: 8px; border-radius: 6px; background: var(--input-bg); border: 1px solid var(--border-color); cursor: pointer; }
+        .control-panel { width: 360px; background: var(--panel-bg); border-left: 1px solid var(--border-color); padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+        .class-selector-list { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
+        .class-item { display: flex; align-items: center; padding: 9px; border-radius: 6px; background: var(--input-bg); border: 1px solid var(--border-color); cursor: pointer; font-size: 14px; }
         .class-item.active { border-color: var(--accent-color); background: rgba(99, 102, 241, 0.1); }
-        .color-indicator { width: 14px; height: 14px; border-radius: 4px; margin-right: 10px; }
+        .color-indicator { width: 16px; height: 16px; border-radius: 4px; margin-right: 10px; }
         .tool-options { display: flex; flex-direction: column; gap: 15px; }
         .tool-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; }
-        .btn-tool { background: var(--input-bg); border: 1px solid var(--border-color); padding: 8px; border-radius: 6px; color: #fff; cursor: pointer; text-align: center; font-size: 13px; transition: 0.2s; }
+        .btn-tool { background: var(--input-bg); border: 1px solid var(--border-color); padding: 9px 6px; border-radius: 6px; color: #fff; cursor: pointer; text-align: center; font-size: 14px; transition: 0.2s; }
         .btn-tool:hover { background: var(--border-color); }
         .btn-tool.active { background: var(--accent-color); border-color: var(--accent-hover); }
         .timeline-container { display: flex; flex-direction: column; gap: 10px; }
-        .timeline-controls { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+        .timeline-controls { display: flex; align-items: center; gap: 10px; font-size: 14px; }
         .timeline-slider { width: 100%; height: 6px; background: var(--input-bg); cursor: pointer; -webkit-appearance: none; border-radius: 3px; }
         .timeline-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; background: var(--accent-color); border-radius: 50%; cursor: pointer; }
         
@@ -89,15 +89,15 @@
         .loading-text { font-size: 18px; font-weight: 500; letter-spacing: 0.5px; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
         .operator-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
-        .operator-select { background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px; outline: none; min-width: 120px; }
+        .operator-select { background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 7px 10px; color: #fff; font-size: 13px; outline: none; min-width: 130px; }
         .class-item { gap: 6px; }
-        .class-drag-handle { cursor: grab; color: var(--text-sub); font-size: 14px; padding: 0 2px; user-select: none; }
-        .class-del-btn { margin-left: auto; background: transparent; border: none; color: var(--danger-color); cursor: pointer; font-size: 14px; padding: 0 2px; }
+        .class-drag-handle { cursor: grab; color: var(--text-sub); font-size: 16px; padding: 0 2px; user-select: none; }
+        .class-del-btn { margin-left: auto; background: transparent; border: none; color: var(--danger-color); cursor: pointer; font-size: 16px; padding: 0 4px; }
         .class-add-row { display: flex; gap: 6px; margin-top: 8px; }
-        .class-add-input { flex: 1; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 8px; color: #fff; font-size: 12px; outline: none; }
-        .class-color-input { width: 34px; height: 30px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); cursor: pointer; padding: 2px; }
-        .step-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
-        .step-input { width: 56px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 8px; color: #fff; font-size: 12px; outline: none; text-align: center; }
+        .class-add-input { flex: 1; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 13px; outline: none; }
+        .class-color-input { width: 36px; height: 34px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--input-bg); cursor: pointer; padding: 2px; }
+        .step-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .step-input { width: 60px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 8px; color: #fff; font-size: 13px; outline: none; text-align: center; }
 
         .phase-modal { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; width: 780px; max-width: 95vw; max-height: 85vh; display: flex; flex-direction: column; padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .phase-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
@@ -107,16 +107,21 @@
         .phase-col { background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 4px; max-height: 62vh; }
         .phase-col-header { padding-bottom: 6px; border-bottom: 1px solid var(--border-color); text-align: center; flex-shrink: 0; }
         .phase-col-body { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 2px; }
-        .phase-sub { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; color: var(--text-main); user-select: none; }
+        .phase-sub { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 13px; color: var(--text-main); user-select: none; }
         .phase-sub:hover { background: rgba(99,102,241,0.12); }
         .phase-sub input { accent-color: var(--accent-color); cursor: pointer; }
         .phase-sub.checked { background: rgba(99,102,241,0.22); color: #fff; }
         .phase-modal-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color); }
         .phase-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-        .phase-chip { background: rgba(99,102,241,0.2); border: 1px solid var(--accent-color); border-radius: 12px; padding: 3px 10px; font-size: 11px; color: #a5b4fc; }
+        .phase-chip { background: rgba(99,102,241,0.2); border: 1px solid var(--accent-color); border-radius: 12px; padding: 4px 12px; font-size: 13px; color: #a5b4fc; }
         .phase-chip.inherited { background: rgba(148,163,184,0.15); border-color: var(--border-color); color: var(--text-sub); }
-        .phase-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.55); color: #a5b4fc; padding: 4px 10px; border-radius: 4px; font-size: 11px; pointer-events: none; user-select: none; z-index: 5; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .phase-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.55); color: #a5b4fc; padding: 5px 12px; border-radius: 4px; font-size: 13px; pointer-events: none; user-select: none; z-index: 5; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .phase-badge.empty { color: var(--text-sub); font-style: italic; }
+
+        .sheet-tabs { display: flex; gap: 4px; margin-bottom: 6px; border-bottom: 1px solid var(--border-color); }
+        .sheet-tab { flex: 1; background: transparent; border: none; color: var(--text-sub); padding: 8px 6px; cursor: pointer; font-size: 13px; border-bottom: 2px solid transparent; }
+        .sheet-tab.active { color: var(--accent-hover); border-bottom-color: var(--accent-color); font-weight: 600; }
+        .sheet-tab:hover:not(.active) { color: var(--text-main); }
     </style>
 </head>
 <body>
@@ -150,22 +155,24 @@
                     <canvas id="bboxCanvas"></canvas>
                     <div class="zoom-badge" id="zoomBadge">100%</div>
                     <div class="phase-badge empty" id="phaseBadge">No phase set</div>
+                    <div class="phase-badge empty" id="structureBadge" style="top: 44px; color: #c4b5fd;">No structure set</div>
                 </div>
             </div>
 
             <div class="diagnostic-report-panel">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:6px;">
-                    <span style="font-size: 13px; font-weight:600; color: #a5b4fc;">📝 Frame Description / Clinical Log</span>
+                    <span style="font-size: 15px; font-weight:600; color: #a5b4fc;">📝 Frame Description / Clinical Log</span>
                     <div style="display:flex; gap:6px;">
-                        <button class="btn btn-sm" id="openPhaseBtn" style="padding:6px 12px; font-size:12px; background:var(--accent-color); border-radius:4px;">🏥 Phase</button>
-                        <button class="btn btn-sm" id="exportExcelBtn" style="padding:6px 12px; font-size:12px; background:#10b981; border-radius:4px;">📊 Export Excel</button>
+                        <button class="btn btn-sm" id="openStructureBtn" style="padding:6px 12px; font-size:13px; background:#7c3aed; border-radius:4px;">🧬 Structure</button>
+                        <button class="btn btn-sm" id="openPhaseBtn" style="padding:6px 12px; font-size:13px; background:var(--accent-color); border-radius:4px;">🏥 Phase</button>
+                        <button class="btn btn-sm" id="exportExcelBtn" style="padding:6px 12px; font-size:13px; background:#10b981; border-radius:4px;">📊 Export Excel</button>
                     </div>
                 </div>
                 <div class="operator-row">
                     <select class="operator-select" id="operatorSelect"></select>
-                    <button class="btn btn-sec" id="addOperatorBtn" style="padding:5px 10px; font-size:12px;">＋ Add Operator</button>
-                    <button class="btn btn-sec" id="renameOperatorBtn" style="padding:5px 10px; font-size:12px;">✏️ Rename</button>
-                    <button class="btn btn-sec" id="delOperatorBtn" style="padding:5px 10px; font-size:12px; border-color:var(--danger-color); color:var(--danger-color);">🗑 Del</button>
+                    <button class="btn btn-sec" id="addOperatorBtn" style="padding:6px 10px; font-size:13px;">＋ Add Operator</button>
+                    <button class="btn btn-sec" id="renameOperatorBtn" style="padding:6px 10px; font-size:13px;">✏️ Rename</button>
+                    <button class="btn btn-sec" id="delOperatorBtn" style="padding:6px 10px; font-size:13px; border-color:var(--danger-color); color:var(--danger-color);">🗑 Del</button>
                 </div>
                 <div class="report-textarea-container">
                     <textarea class="report-textarea" id="frameReportTextarea" placeholder="Select an operator above, then type the description for this frame."></textarea>
@@ -216,7 +223,7 @@
                             </div>
                         </div>
                         <div style="display: flex; justify-content: flex-end; gap: 8px;">
-                            <button class="btn btn-sm" id="addTaskBtn" style="background-color: var(--accent-hover); font-size: 12px; padding: 6px 12px;">+ Add Task</button>
+                            <button class="btn btn-sm" id="addTaskBtn" style="background-color: var(--accent-hover); font-size: 13px; padding: 7px 14px;">+ Add Task</button>
                         </div>
                         <div class="csv-table-container">
                             <table class="csv-table" id="tasksTable">
@@ -242,7 +249,7 @@
                             <div class="csv-form-group"><label>Uninst Time</label><input type="text" class="csv-input" id="toolUninstallInput" value="00:00:00.000000"></div>
                         </div>
                         <div style="display: flex; justify-content: flex-end; gap: 8px;">
-                            <button class="btn btn-sm" id="addToolBtn" style="background-color: var(--accent-hover); font-size: 12px; padding: 6px 12px;">+ Add Tool</button>
+                            <button class="btn btn-sm" id="addToolBtn" style="background-color: var(--accent-hover); font-size: 13px; padding: 7px 14px;">+ Add Tool</button>
                         </div>
                         <div class="csv-table-container">
                             <table class="csv-table" id="toolsTable">
@@ -252,8 +259,8 @@
                         </div>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 10px;">
-                        <span id="csvStatusText" style="font-size: 12px; color: var(--text-sub);">No unsaved CSV changes</span>
-                        <button class="btn btn-sm" id="saveCsvBtn" style="background-color: #10b981; font-size: 12px; padding: 6px 12px;">Save CSV Annotations</button>
+                        <span id="csvStatusText" style="font-size: 13px; color: var(--text-sub);">No unsaved CSV changes</span>
+                        <button class="btn btn-sm" id="saveCsvBtn" style="background-color: #10b981; font-size: 13px; padding: 7px 14px;">Save CSV Annotations</button>
                     </div>
                 </div>
             </div>
@@ -262,24 +269,28 @@
         </div>
 
         <div class="control-panel">
-            <div class="panel-section-title" style="font-size: 14px; color: var(--text-sub); font-weight: 600; text-transform: uppercase;">Annotation Classes</div>
+            <div class="panel-section-title" style="font-size: 15px; color: var(--text-sub); font-weight: 600; text-transform: uppercase;">Instrument Classes</div>
+            <div class="sheet-tabs">
+                <button class="sheet-tab active" id="sheetLapBtn" data-sheet="laparoscopic">Laparoscopic</button>
+                <button class="sheet-tab" id="sheetRobBtn" data-sheet="robotic">Robotic</button>
+            </div>
             <input type="text" class="class-add-input" id="classSearchInput" placeholder="🔍 Search classes..." style="flex: none; width: 100%; margin-bottom: 2px;">
             <div class="class-selector-list" id="classList"></div>
             <div class="class-add-row">
                 <input type="color" class="class-color-input" id="newClassColor" value="#ffffff">
                 <input type="text" class="class-add-input" id="newClassName" placeholder="New class name...">
-                <button class="btn" id="addClassBtn" style="padding:5px 10px; font-size:12px;">＋</button>
+                <button class="btn" id="addClassBtn" style="padding:5px 10px; font-size:13px;">＋</button>
             </div>
             
-            <div class="panel-section-title" style="font-size: 14px; color: var(--text-sub); font-weight: 600; text-transform: uppercase; margin-top: 10px;">Loaded Instances (this frame)</div>
+            <div class="panel-section-title" style="font-size: 15px; color: var(--text-sub); font-weight: 600; text-transform: uppercase; margin-top: 10px;">Loaded Instances (this frame)</div>
             <div class="class-selector-list" id="instanceList" style="max-height: 160px;"></div>
 
-            <div class="panel-section-title" style="font-size: 14px; color: var(--text-sub); font-weight: 600; text-transform: uppercase; margin-top: 10px;">Tools & Matrix</div>
+            <div class="panel-section-title" style="font-size: 15px; color: var(--text-sub); font-weight: 600; text-transform: uppercase; margin-top: 10px;">Tools & Matrix</div>
             <div class="tool-options">
-                <div style="display:flex; justify-content:space-between; font-size:12px;"><span>Brush Radius</span><span id="brushSizeVal" style="font-weight:bold;">15 px</span></div>
+                <div style="display:flex; justify-content:space-between; font-size:13px;"><span>Brush Radius</span><span id="brushSizeVal" style="font-weight:bold;">15 px</span></div>
                 <input type="range" id="brushSize" min="2" max="100" value="15" style="width:100%; accent-color: var(--accent-color);">
                 
-                <div style="display:flex; justify-content:space-between; font-size:12px;"><span>Mask Alpha</span><span id="opacityVal" style="font-weight:bold;">40%</span></div>
+                <div style="display:flex; justify-content:space-between; font-size:13px;"><span>Mask Alpha</span><span id="opacityVal" style="font-weight:bold;">40%</span></div>
                 <input type="range" id="maskOpacity" min="10" max="100" value="40" style="width:100%; accent-color: var(--accent-color);">
 
                 <div class="tool-buttons">
@@ -288,7 +299,7 @@
                     <button class="btn-tool" id="contourBtn">✏️ Contour</button>
                     <button class="btn-tool" id="bboxBtn">📦 Bbox</button>
                 </div>
-                <div style="display:flex; justify-content:space-between; font-size:12px; align-items:center; background: var(--input-bg); padding: 10px; border-radius: 6px;">
+                <div style="display:flex; justify-content:space-between; font-size:13px; align-items:center; background: var(--input-bg); padding: 10px; border-radius: 6px;">
                     <span>✨ AI Mask Auto-Propose</span>
                     <input type="checkbox" id="aiAutoPropose" checked style="accent-color: var(--accent-color); transform: scale(1.2);">
                 </div>
@@ -320,12 +331,29 @@
                     <div class="phase-modal-title">🏥 Surgical Phase Annotation</div>
                     <div class="phase-modal-hint">Multi-select. Selection auto-carries to subsequent frames until you change it again. Ctrl+P also opens/closes this.</div>
                 </div>
-                <button class="btn btn-sec" id="clearPhaseBtn" style="padding:6px 12px; font-size:12px; border-color:var(--danger-color); color:var(--danger-color);">Clear this frame</button>
+                <button class="btn btn-sec" id="clearPhaseBtn" style="padding:6px 12px; font-size:13px; border-color:var(--danger-color); color:var(--danger-color);">Clear this frame</button>
             </div>
             <div class="phase-grid" id="phaseGrid"></div>
             <div class="phase-modal-footer">
                 <div class="phase-chips" id="phaseChipRow"></div>
                 <button class="btn" id="closePhaseBtn" style="background:#10b981;">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="structureModal">
+        <div class="phase-modal">
+            <div class="phase-modal-header">
+                <div>
+                    <div class="phase-modal-title" style="color:#c4b5fd;">🧬 Anatomical Structure Annotation</div>
+                    <div class="phase-modal-hint">Multi-select. Carries forward to later frames. Hover an abbreviation to see the full name. Ctrl+Shift+S opens/closes.</div>
+                </div>
+                <button class="btn btn-sec" id="clearStructureBtn" style="padding:6px 12px; font-size:13px; border-color:var(--danger-color); color:var(--danger-color);">Clear this frame</button>
+            </div>
+            <div class="phase-grid" id="structureGrid" style="grid-template-columns: repeat(3, 1fr);"></div>
+            <div class="phase-modal-footer">
+                <div class="phase-chips" id="structureChipRow"></div>
+                <button class="btn" id="closeStructureBtn" style="background:#10b981;">Done</button>
             </div>
         </div>
     </div>
@@ -337,23 +365,42 @@
             return res.json();
         }
 
-        // ── 기본 클래스 정의 ─────────────────────────────────────────────
-        const builtinClasses = {
-            0: { name: "grasping retractor",            color: "#e6194b" },
-            1: { name: "cadiere forceps",               color: "#3cb44b" },
-            2: { name: "bipolar forceps",               color: "#ffe119" },
-            3: { name: "force bipolar",                 color: "#4363d8" },
-            4: { name: "clip applier",                  color: "#f58231" },
-            5: { name: "stapler",                       color: "#911eb4" },
-            6: { name: "permanent cautery hook spatula",color: "#46f0f0" },
-            7: { name: "monopolar curved scissor",      color: "#f032e6" },
-            8: { name: "vessel sealer",                 color: "#bcf60c" },
-            9: { name: "tip up fenestrated grasper",    color: "#fabebe" },
-            10:{ name: "bipolar dissector",             color: "#008080" },
-            11:{ name: "needle driver",                 color: "#e6beff" },
-            12:{ name: "prograsp forceps",              color: "#9a6324" },
-            13:{ name: "suction irrigator",             color: "#fffac8" }
-        };
+        // ── Instrument classes: Laparoscopic + Robotic sheets ────────────
+        // 30-color rotating palette (kelly's distinguishable colors, extended)
+        const CLASS_PALETTE = [
+            "#e6194b","#3cb44b","#ffe119","#4363d8","#f58231","#911eb4","#46f0f0","#f032e6",
+            "#bcf60c","#fabebe","#008080","#e6beff","#9a6324","#fffac8","#800000","#aaffc3",
+            "#808000","#ffd8b1","#000075","#a9a9a9","#ff8ab9","#7cffbe","#c69fff","#ffe066",
+            "#5fa8d3","#b23a48","#7fb069","#dbb42c","#645dd7","#2ec4b6"
+        ];
+        const LAPAROSCOPIC_NAMES = [
+            "maryland forceps", "fenestrated grasper", "tip up fenestrated forceps",
+            "cadiere forceps", "prograsp forceps", "needle driver", "curved scissors",
+            "cautery hook",
+            "clip applier (small)", "clip applier (medium-large)", "clip applier (large)",
+            "energy device (harmonic)", "energy device (vessel sealer)", "energy device (synchro seal)",
+            "suction irrigator",
+        ];
+        const ROBOTIC_NAMES = [
+            "debakey forceps", "straight atraumatic grasper", "curved atraumatic grasper",
+            "dissector", "babcock grasper", "knot pusher", "needle holder",
+            "metal clip applier", "hemolok clip applier",
+            "energy device (ultrasonic)", "energy device (bipolar)", "energy device (monopolar)",
+            "scissors", "suction irrigator",
+        ];
+        const builtinClasses = (() => {
+            const out = {};
+            let id = 0;
+            LAPAROSCOPIC_NAMES.forEach(name => {
+                out[id] = { name, color: CLASS_PALETTE[id % CLASS_PALETTE.length], sheet: "laparoscopic" };
+                id++;
+            });
+            ROBOTIC_NAMES.forEach(name => {
+                out[id] = { name, color: CLASS_PALETTE[id % CLASS_PALETTE.length], sheet: "robotic" };
+                id++;
+            });
+            return out;
+        })();
 
         function hexToRgb(h) {
             const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);
@@ -382,6 +429,7 @@
             classes: withRgb(JSON.parse(JSON.stringify(builtinClasses))),
             classOrder: Object.keys(builtinClasses).map(Number), // 순서 배열
             classSearchQuery: "",
+            currentSheet: "laparoscopic",   // "laparoscopic" or "robotic"
             zoomFactor: 1,
             // Gastric surgery phase taxonomy. Sub keys are the abbreviations that get
             // saved to JSON; `full` is the tooltip. Order is preserved by insertion.
@@ -472,6 +520,84 @@
             // Sparse map: only frames where the phase selection CHANGES from the prior state.
             // Effective phase at frame N = the nearest key ≤ N. This is what "carry-forward" means.
             framePhases: {},
+
+            // Anatomical structure taxonomy — 3 top-level categories with abbreviated sub-items.
+            // Same carry-forward semantics as framePhases (sparse keyframe map).
+            structureDefinitions: {
+                1: {
+                    name: "Or", full: "Organ",
+                    sub: {
+                        "Sto":   { full: "Stomach" },
+                        "Eso":   { full: "Esophagus" },
+                        "Duo":   { full: "Duodenum" },
+                        "SI":    { full: "Small Intestine" },
+                        "Lv":    { full: "Liver" },
+                        "Panc":  { full: "Pancreas" },
+                        "Spl":   { full: "Spleen" },
+                        "Col":   { full: "Colon" },
+                        "Rec":   { full: "Rectum" },
+                        "Mscol": { full: "Mesocolon" },
+                        "Gb":    { full: "Gallbladder" },
+                        "Diap":  { full: "Diaphragm" },
+                        "Crus":  { full: "Crus muscle" },
+                        "Fal":   { full: "Falciform ligament" },
+                        "Rlig":  { full: "Round ligament" },
+                        "App":   { full: "Appendix" },
+                        "Ut":    { full: "Uterus" },
+                        "Ov":    { full: "Ovary" },
+                        "Lu":    { full: "Lung" },
+                        "H":     { full: "Heart" },
+                    }
+                },
+                2: {
+                    name: "Art", full: "Artery",
+                    sub: {
+                        "CT":    { full: "Celiac trunk" },
+                        "LGA":   { full: "Left gastric artery" },
+                        "CHA":   { full: "Common hepatic artery" },
+                        "RGA":   { full: "Right gastric artery" },
+                        "PHA":   { full: "Proper hepatic artery" },
+                        "RHA":   { full: "Right hepatic artery" },
+                        "LHA":   { full: "Left hepatic artery" },
+                        "GDA":   { full: "Gastroduodenal artery" },
+                        "IPA":   { full: "Infrapyloric artery" },
+                        "RGEA":  { full: "Right gastroepiploic artery" },
+                        "ASPDA": { full: "Anterior superior pancreaticoduodenal artery" },
+                        "SA":    { full: "Splenic artery" },
+                        "LGEA":  { full: "Left gastroepiploic artery" },
+                        "Ob LGEA": { full: "Omental branch of left gastroepiploic artery" },
+                        "SGA":   { full: "Short gastric artery" },
+                        "SMA":   { full: "Superior mesenteric artery" },
+                        "RCA":   { full: "Right colic artery" },
+                        "MCA":   { full: "Middle colic artery" },
+                        "LCA":   { full: "Left colic artery" },
+                    }
+                },
+                3: {
+                    name: "V", full: "Vein",
+                    sub: {
+                        "LGV":   { full: "Left gastric vein" },
+                        "SV":    { full: "Splenic vein" },
+                        "PV":    { full: "Portal vein" },
+                        "SMV":   { full: "Superior mesenteric vein" },
+                        "GCT":   { full: "Gastrocolic trunk" },
+                        "RGEV":  { full: "Right gastroepiploic vein" },
+                        "ASPDV": { full: "Anterior superior pancreaticoduodenal vein" },
+                        "ARCV":  { full: "Accessary right colic vein" },
+                        "SGV":   { full: "Short gastric vein" },
+                        "LGEV":  { full: "Left gastroepiploic vein" },
+                        "RGV":   { full: "Right gastric vein" },
+                        "RCV":   { full: "Right colic vein" },
+                        "MCV":   { full: "Middle colic vein" },
+                        "LCV":   { full: "Left colic vein" },
+                        "LHV":   { full: "Left hepatic vein" },
+                        "RHV":   { full: "Right hepatic vein" },
+                        "MHV":   { full: "Middle hepatic vein" },
+                        "IVC":   { full: "Inferior Vena Cava" },
+                    }
+                },
+            },
+            frameStructures: {},
             bboxStart: null, bboxCurrent: null, isDrawingBbox: false,
             tasksList: [], toolsList: [], csvModified: false, timelineStart: null, timelineEnd: null,
             undoStack: []
@@ -565,6 +691,7 @@
             renderFileList();
 
             await loadPhasesFromServer(type === "video" ? state.videos[idx] : "");
+            await loadStructuresFromServer(type === "video" ? state.videos[idx] : "");
 
             const repRes = await postJSON("/api/load_reports", { directory: state.directory, video_name: type === "video" ? state.videos[idx] : "" });
             // 레거시 flat 포맷 → 첫 operator로 마이그레이션
@@ -702,6 +829,7 @@
             const opData = state.reports[state.currentOperator] || {};
             frameReportTextarea.value = opData[String(fIdx)] || "";
             updatePhaseBadge(fIdx);
+            updateStructureBadge(fIdx);
         }
 
         function saveCurrentFrameReport(fIdx) {
@@ -856,6 +984,120 @@
             updatePhaseBadge(curFrame);
         };
 
+        // ── Structure annotation (same carry-forward semantics as Phase) ─
+        function getEffectiveStructures(frameIdx) {
+            const keys = Object.keys(state.frameStructures).map(Number).sort((a,b) => a-b);
+            let best = -1;
+            for (const k of keys) { if (k <= frameIdx) best = k; else break; }
+            if (best === -1) return { structures: [], inherited: false, sourceFrame: null };
+            return { structures: state.frameStructures[best].slice(), inherited: best !== frameIdx, sourceFrame: best };
+        }
+        function updateStructureBadge(frameIdx) {
+            const badge = $("structureBadge");
+            if (!badge) return;
+            const eff = getEffectiveStructures(frameIdx);
+            if (eff.structures.length === 0) {
+                badge.innerText = "No structure set";
+                badge.classList.add("empty");
+                return;
+            }
+            badge.classList.remove("empty");
+            const label = eff.structures.join(", ");
+            badge.innerText = eff.inherited
+                ? `🧬 ${label}  ⟵ frame ${eff.sourceFrame}`
+                : `🧬 ${label}`;
+        }
+        async function saveStructuresToServer() {
+            if (!state.directory) return;
+            const vidName = state.mediaType === "video" ? state.videos[state.currentIndex] : "";
+            await postJSON("/api/save_structures", {
+                directory: state.directory, video_name: vidName,
+                structures: { frames: state.frameStructures },
+            });
+        }
+        async function loadStructuresFromServer(vidName) {
+            const res = await postJSON("/api/load_structures", { directory: state.directory, video_name: vidName || "" });
+            const data = res && res.structures ? res.structures : {};
+            state.frameStructures = (data && data.frames) ? data.frames : {};
+        }
+        function renderStructureGrid() {
+            const grid = $("structureGrid");
+            const chipRow = $("structureChipRow");
+            grid.innerHTML = "";
+            const curFrame = currentPhaseFrame();
+            const currentSelection = new Set((state.frameStructures[curFrame] || getEffectiveStructures(curFrame).structures));
+
+            Object.keys(state.structureDefinitions).forEach(topKey => {
+                const p = state.structureDefinitions[topKey];
+                const col = document.createElement("div");
+                col.className = "phase-col";
+                const header = document.createElement("div");
+                header.className = "phase-col-header";
+                header.innerHTML = `<div style="font-size:15px; font-weight:700; color:#c4b5fd;">${p.name}</div>` +
+                    (p.full ? `<div style="font-size:11px; color:var(--text-sub); margin-top:2px; font-weight:400;">${p.full}</div>` : "");
+                col.appendChild(header);
+                const body = document.createElement("div");
+                body.className = "phase-col-body";
+                col.appendChild(body);
+                Object.keys(p.sub || {}).forEach(subKey => {
+                    const entry = p.sub[subKey];
+                    const fullLabel = (entry && typeof entry === "object") ? (entry.full || "") : (entry || "");
+                    const isChecked = currentSelection.has(subKey);
+                    const row = document.createElement("label");
+                    row.className = "phase-sub" + (isChecked ? " checked" : "");
+                    row.title = fullLabel;
+                    row.innerHTML = `<input type="checkbox" ${isChecked ? "checked" : ""}><span>${subKey}</span>`;
+                    row.querySelector("input").onchange = (e) => {
+                        const set = new Set((state.frameStructures[curFrame] || getEffectiveStructures(curFrame).structures));
+                        if (e.target.checked) set.add(subKey); else set.delete(subKey);
+                        const inheritedNow = new Set(getEffectiveStructures(curFrame - 1).structures);
+                        const newArr = Array.from(set).sort();
+                        const sameAsInherited = newArr.length === inheritedNow.size && newArr.every(v => inheritedNow.has(v));
+                        if (sameAsInherited) delete state.frameStructures[curFrame];
+                        else state.frameStructures[curFrame] = newArr;
+                        saveStructuresToServer();
+                        renderStructureGrid();
+                        updateStructureBadge(curFrame);
+                    };
+                    body.appendChild(row);
+                });
+                grid.appendChild(col);
+            });
+
+            chipRow.innerHTML = "";
+            const eff = getEffectiveStructures(curFrame);
+            eff.structures.forEach(s => {
+                const c = document.createElement("span");
+                c.className = "phase-chip" + (eff.inherited ? " inherited" : "");
+                c.style.borderColor = "#c4b5fd";
+                c.style.color = "#c4b5fd";
+                c.innerText = s;
+                chipRow.appendChild(c);
+            });
+            if (eff.structures.length === 0) {
+                const c = document.createElement("span");
+                c.className = "phase-chip inherited";
+                c.innerText = "(nothing set yet — select to begin)";
+                chipRow.appendChild(c);
+            }
+        }
+        function openStructureModal() {
+            if (!state.imageLoaded) { showToast("Load a video/image first", true); return; }
+            renderStructureGrid();
+            $("structureModal").classList.add("show");
+        }
+        function closeStructureModal() { $("structureModal").classList.remove("show"); }
+        $("openStructureBtn").onclick = openStructureModal;
+        $("closeStructureBtn").onclick = closeStructureModal;
+        $("structureModal").onclick = (e) => { if (e.target.id === "structureModal") closeStructureModal(); };
+        $("clearStructureBtn").onclick = () => {
+            const curFrame = currentPhaseFrame();
+            delete state.frameStructures[curFrame];
+            saveStructuresToServer();
+            renderStructureGrid();
+            updateStructureBadge(curFrame);
+        };
+
         $("exportExcelBtn").onclick = async () => {
             saveCurrentFrameReport(activeReportFrame);
             const res = await postJSON("/api/export_reports_excel", {
@@ -873,20 +1115,40 @@
             if (!state.directory) return;
             const plain = {};
             Object.keys(state.classes).forEach(cid => {
-                plain[cid] = { name: state.classes[cid].name, color: state.classes[cid].color };
+                plain[cid] = {
+                    name: state.classes[cid].name,
+                    color: state.classes[cid].color,
+                    sheet: state.classes[cid].sheet || "laparoscopic",
+                };
             });
             postJSON("/api/save_classes", { directory: state.directory, classes: { classes: plain, order: state.classOrder } });
         }
 
         $("classSearchInput").oninput = (e) => { state.classSearchQuery = e.target.value.trim().toLowerCase(); renderClassList(); };
 
+        function setActiveSheet(sheet) {
+            state.currentSheet = sheet;
+            document.querySelectorAll(".sheet-tab").forEach(b => b.classList.toggle("active", b.dataset.sheet === sheet));
+            // If the active class doesn't belong to the newly-selected sheet, pick the first that does.
+            const curCls = state.classes[state.currentClass];
+            if (!curCls || (curCls.sheet || "laparoscopic") !== sheet) {
+                const firstInSheet = state.classOrder.find(cid => state.classes[cid] && (state.classes[cid].sheet || "laparoscopic") === sheet);
+                if (firstInSheet !== undefined) state.currentClass = firstInSheet;
+            }
+            renderClassList();
+        }
+        document.querySelectorAll(".sheet-tab").forEach(b => b.onclick = () => setActiveSheet(b.dataset.sheet));
+
         function renderClassList() {
             classListDiv.innerHTML = "";
             const query = state.classSearchQuery || "";
+            const sheet = state.currentSheet;
             state.classOrder.forEach((cidNum, orderIdx) => {
                 const cid = String(cidNum);
-                if (!state.classes[cid]) return;
-                if (query && !state.classes[cid].name.toLowerCase().includes(query)) return;
+                const cls = state.classes[cid];
+                if (!cls) return;
+                if ((cls.sheet || "laparoscopic") !== sheet) return;
+                if (query && !cls.name.toLowerCase().includes(query)) return;
                 const div = document.createElement("div");
                 div.className = `class-item ${state.currentClass === cidNum ? "active" : ""}`;
                 div.draggable = true;
@@ -894,8 +1156,8 @@
 
                 div.innerHTML = `
                     <span class="class-drag-handle" title="Drag to reorder">⠿</span>
-                    <div class="color-indicator" style="background:${state.classes[cid].color}"></div>
-                    <span style="flex:1; font-size:13px;">${state.classes[cid].name}</span>
+                    <div class="color-indicator" style="background:${cls.color}"></div>
+                    <span style="flex:1; font-size:14px;">${cls.name}</span>
                     <button class="class-del-btn" title="Delete class">✕</button>`;
 
                 div.querySelector(".class-del-btn").onclick = (e) => {
@@ -926,18 +1188,18 @@
             });
         }
 
-        // 새 클래스 추가
+        // 새 클래스 추가 (attaches to the currently-active sheet)
         $("addClassBtn").onclick = () => {
             const name = $("newClassName").value.trim();
             const color = $("newClassColor").value;
             if (!name) { showToast("Enter a class name first", true); return; }
             const newId = (Math.max(-1, ...Object.keys(state.classes).map(Number)) + 1);
-            state.classes[newId] = { name, color, rgb: hexToRgb(color) };
+            state.classes[newId] = { name, color, rgb: hexToRgb(color), sheet: state.currentSheet };
             state.classOrder.push(newId);
             $("newClassName").value = "";
             saveClassesToServer();
             renderClassList();
-            showToast(`Class "${name}" added`);
+            showToast(`Class "${name}" added to ${state.currentSheet}`);
         };
 
         // ── CSV 관리 ─────────────────────────────────────────────────────
@@ -1219,7 +1481,7 @@
                     const row = document.createElement("div");
                     row.className = "class-item";
                     row.innerHTML = `<div class="color-indicator" style="background:${cls.color}"></div>
-                        <span style="flex:1; font-size:12px;">📦 ${cls.name} #${box[4] || (i + 1)}</span>
+                        <span style="flex:1; font-size:13px;">📦 ${cls.name} #${box[4] || (i + 1)}</span>
                         <button class="class-del-btn" title="Delete this bbox instance">✕</button>`;
                     row.querySelector(".class-del-btn").onclick = (e) => {
                         e.stopPropagation();
@@ -1239,7 +1501,7 @@
                 const row = document.createElement("div");
                 row.className = "class-item";
                 row.innerHTML = `<div class="color-indicator" style="background:${cls.color}"></div>
-                    <span style="flex:1; font-size:12px;">🎨 ${cls.name} (mask)</span>
+                    <span style="flex:1; font-size:13px;">🎨 ${cls.name} (mask)</span>
                     <button class="class-del-btn" title="Clear this class's mask on this frame">✕</button>`;
                 row.querySelector(".class-del-btn").onclick = (e) => {
                     e.stopPropagation();
@@ -1252,7 +1514,7 @@
             });
 
             if (!div.children.length) {
-                div.innerHTML = `<div style="font-size:12px; color:var(--text-sub); padding:6px;">No instances on this frame yet.</div>`;
+                div.innerHTML = `<div style="font-size:13px; color:var(--text-sub); padding:6px;">No instances on this frame yet.</div>`;
             }
         }
 
@@ -1431,6 +1693,13 @@
                 e.preventDefault();
                 if ($("phaseModal").classList.contains("show")) closePhaseModal();
                 else openPhaseModal();
+                return;
+            }
+            // Ctrl+Shift+S: toggle structure popup
+            if ((e.ctrlKey||e.metaKey) && e.shiftKey && key==="s") {
+                e.preventDefault();
+                if ($("structureModal").classList.contains("show")) closeStructureModal();
+                else openStructureModal();
                 return;
             }
             if (tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;

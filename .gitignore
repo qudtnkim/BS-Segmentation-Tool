@@ -7,6 +7,7 @@
 *_reports.json
 *_coco.json
 *_phases.json
+*_structures.json
 *.csv
 temp_voice.webm
 

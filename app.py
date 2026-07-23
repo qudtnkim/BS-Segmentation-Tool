@@ -547,6 +547,23 @@ def save_phases():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@app.route('/api/load_structures', methods=['POST'])
+def load_structures():
+    data = request.json or {}
+    payload = load_json(annotation_path(data, "_structures.json", "image_structures.json"), default={})
+    return jsonify({"success": True, "structures": payload})
+
+
+@app.route('/api/save_structures', methods=['POST'])
+def save_structures():
+    data = request.json or {}
+    try:
+        dump_json(annotation_path(data, "_structures.json", "image_structures.json"), data.get('structures', {}))
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route('/api/load_classes', methods=['POST'])
 def load_classes():
     data = request.json or {}
