@@ -163,7 +163,6 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:6px;">
                     <span style="font-size: 15px; font-weight:600; color: #a5b4fc;">📝 Frame Description / Clinical Log</span>
                     <div style="display:flex; gap:6px;">
-                        <button class="btn btn-sm" id="openStructureBtn" style="padding:6px 12px; font-size:13px; background:#7c3aed; border-radius:4px;">🧬 Structure</button>
                         <button class="btn btn-sm" id="openPhaseBtn" style="padding:6px 12px; font-size:13px; background:var(--accent-color); border-radius:4px;">🏥 Phase</button>
                         <button class="btn btn-sm" id="exportExcelBtn" style="padding:6px 12px; font-size:13px; background:#10b981; border-radius:4px;">📊 Export Excel</button>
                     </div>
@@ -282,6 +281,15 @@
                 <button class="btn" id="addClassBtn" style="padding:5px 10px; font-size:13px;">＋</button>
             </div>
             
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 10px;">
+                <div class="panel-section-title" style="font-size: 15px; color: var(--text-sub); font-weight: 600; text-transform: uppercase;">Anatomical Structure</div>
+                <button class="btn btn-sec" id="clearStructureBtn" title="Clear structure selections on this frame"
+                        style="padding:3px 8px; font-size:11px; border-color:var(--danger-color); color:var(--danger-color);">Clear frame</button>
+            </div>
+            <div class="sheet-tabs" id="structureTabs"></div>
+            <input type="text" class="class-add-input" id="structureSearchInput" placeholder="🔍 Search structures..." style="flex: none; width: 100%; margin-bottom: 2px;">
+            <div class="class-selector-list" id="structureList" style="max-height: 260px;"></div>
+
             <div class="panel-section-title" style="font-size: 15px; color: var(--text-sub); font-weight: 600; text-transform: uppercase; margin-top: 10px;">Loaded Instances (this frame)</div>
             <div class="class-selector-list" id="instanceList" style="max-height: 160px;"></div>
 
@@ -337,23 +345,6 @@
             <div class="phase-modal-footer">
                 <div class="phase-chips" id="phaseChipRow"></div>
                 <button class="btn" id="closePhaseBtn" style="background:#10b981;">Done</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="structureModal">
-        <div class="phase-modal">
-            <div class="phase-modal-header">
-                <div>
-                    <div class="phase-modal-title" style="color:#c4b5fd;">🧬 Anatomical Structure Annotation</div>
-                    <div class="phase-modal-hint">Multi-select. Carries forward to later frames. Hover an abbreviation to see the full name. Ctrl+Shift+S opens/closes.</div>
-                </div>
-                <button class="btn btn-sec" id="clearStructureBtn" style="padding:6px 12px; font-size:13px; border-color:var(--danger-color); color:var(--danger-color);">Clear this frame</button>
-            </div>
-            <div class="phase-grid" id="structureGrid" style="grid-template-columns: repeat(3, 1fr);"></div>
-            <div class="phase-modal-footer">
-                <div class="phase-chips" id="structureChipRow"></div>
-                <button class="btn" id="closeStructureBtn" style="background:#10b981;">Done</button>
             </div>
         </div>
     </div>
@@ -431,52 +422,34 @@
             classSearchQuery: "",
             currentSheet: "laparoscopic",   // "laparoscopic" or "robotic"
             zoomFactor: 1,
-            // Gastric surgery phase taxonomy. Sub keys are the abbreviations that get
-            // saved to JSON; `full` is the tooltip. Order is preserved by insertion.
+            // Surgical phase taxonomy — LND is now under Structure (as "LN"). Sub keys
+            // are the abbreviations saved to JSON; `full` is the display / tooltip text.
             phaseDefinitions: {
                 1: {
-                    name: "LND", full: "Lymph Node Dissection",
+                    name: "Om", full: "Omentectomy",
                     sub: {
-                        "PO":      { full: "Partial Omentectomy" },
-                        "TO":      { full: "Total Omentectomy" },
-                        "1 LND":   { full: "Left paracardial LND" },
-                        "2 LND":   { full: "Right paracardial LND" },
-                        "3a LND":  { full: "Lesser curvature LND (3a)" },
-                        "3b LND":  { full: "Lesser curvature LND (3b)" },
-                        "4sa LND": { full: "Left greater curvature LND (short gastric artery)" },
-                        "4sb LND": { full: "Left greater curvature LND (left gastroepiploic artery)" },
-                        "4d LND":  { full: "Left greater curvature LND (right gastroepiploic artery)" },
-                        "5 LND":   { full: "Supraduodenal LND" },
-                        "6 LND":   { full: "Infrapyloric LND" },
-                        "7 LND":   { full: "Left gastric LND" },
-                        "8a LND":  { full: "Common hepatic LND" },
-                        "9 LND":   { full: "Celiac LND" },
-                        "10 LND":  { full: "Splenic hilar LND" },
-                        "11p LND": { full: "Proximal splenic LND" },
-                        "11d LND": { full: "Distal splenic LND" },
-                        "12a LND": { full: "Hepatoduodenal LND (12a)" },
-                        "12b LND": { full: "Hepatoduodenal LND (12b)" },
-                        "12p LND": { full: "Hepatoduodenal LND (12p)" },
-                        "13":      { full: "Posterior surface of Pancreatic head LND" },
-                        "14v":     { full: "Superior Mesenteric Vein LND" },
-                        "15":      { full: "Middle colic vessels LND" },
-                        "16a1":    { full: "Paraaortic LND (Diaphragmatic Aortic Hiatus)" },
-                        "16a2":    { full: "Paraaortic LND (Celiac artery - Left renal vein)" },
-                        "16b1":    { full: "Paraaortic LND (Left renal vein - Inferior mesenteric artery)" },
-                        "16b2":    { full: "Paraaortic LND (Left renal vein - Inferior mesenteric artery)" },
+                        "PO": { full: "Partial Omentectomy" },
+                        "TO": { full: "Total Omentectomy" },
                     }
                 },
                 2: {
                     name: "VL", full: "Vessel Ligation",
                     sub: {
-                        "LGEV": { full: "Left Gastro Epiploic Vessel Ligation" },
-                        "RGEV": { full: "Right Gastro Epiploic Vessel Ligation" },
-                        "RGV":  { full: "Right Gastric Vessel Ligation" },
-                        "LGV":  { full: "Left Gastric Vessel Ligation" },
-                        "SGV":  { full: "Short Gastric Vessel Ligation" },
-                        "PGV":  { full: "Posterior Gastric Vessel Ligation" },
-                        "RCV":  { full: "Right Colic Vessel Ligation" },
-                        "MCV":  { full: "Middle Colic Vessel Ligation" },
+                        "LGEV":   { full: "Left Gastro Epiploic Vessel Ligation" },
+                        "RGEV":   { full: "Right Gastro Epiploic Vessel Ligation" },
+                        "RGV":    { full: "Right Gastric Vessel Ligation" },
+                        "LGV":    { full: "Left Gastric Vessel Ligation" },
+                        "SGV":    { full: "Short Gastric Vessel Ligation" },
+                        "PGV":    { full: "Posterior Gastric Vessel Ligation" },
+                        "RCV":    { full: "Right Colic Vessel Ligation" },
+                        "MCV":    { full: "Middle Colic Vessel Ligation" },
+                        "ICVL":   { full: "Ileocolic Vessel Ligation" },
+                        "RCVL":   { full: "Right Colic Vessel Ligation" },
+                        "MCVL":   { full: "Middle Colic Vessel Ligation" },
+                        "RBMCVL": { full: "Middle Colic Vessel Right Branch Ligation" },
+                        "LCVL":   { full: "Left Colic Vessel Ligation" },
+                        "IMVL":   { full: "Inferior Mesenteric Vessel Ligation" },
+                        "MRVL":   { full: "Middle Rectal Vessel Ligation" },
                     }
                 },
                 3: {
@@ -487,7 +460,8 @@
                         "ET": { full: "Esophagus Transection" },
                         "JT": { full: "Jejunum Transection" },
                         "CT": { full: "Colon Transection" },
-                        "LN": { full: "Lymph Node" },
+                        "IT": { full: "Ileum Transection" },
+                        "RT": { full: "Rectum Transection" },
                     }
                 },
                 4: {
@@ -498,6 +472,9 @@
                         "EJ": { full: "EsophagoJejunostomy" },
                         "JJ": { full: "JejunoJejunostomy" },
                         "EG": { full: "EsophagoGastrostomy" },
+                        "IC": { full: "Ileocolostomy" },
+                        "CC": { full: "Colocolostomy" },
+                        "CR": { full: "Colorectostomy" },
                     }
                 },
                 5: {
@@ -521,8 +498,10 @@
             // Effective phase at frame N = the nearest key ≤ N. This is what "carry-forward" means.
             framePhases: {},
 
-            // Anatomical structure taxonomy — 3 top-level categories with abbreviated sub-items.
-            // Same carry-forward semantics as framePhases (sparse keyframe map).
+            // Anatomical structure taxonomy — 6 top-level categories:
+            //   Or (Organ), Art (Artery), V (Vein), LN (Lymph Node — moved from Phase),
+            //   N (Nerve), F (Fascia).
+            // Same sparse-keyframe + carry-forward semantics as framePhases.
             structureDefinitions: {
                 1: {
                     name: "Or", full: "Organ",
@@ -552,25 +531,30 @@
                 2: {
                     name: "Art", full: "Artery",
                     sub: {
-                        "CT":    { full: "Celiac trunk" },
-                        "LGA":   { full: "Left gastric artery" },
-                        "CHA":   { full: "Common hepatic artery" },
-                        "RGA":   { full: "Right gastric artery" },
-                        "PHA":   { full: "Proper hepatic artery" },
-                        "RHA":   { full: "Right hepatic artery" },
-                        "LHA":   { full: "Left hepatic artery" },
-                        "GDA":   { full: "Gastroduodenal artery" },
-                        "IPA":   { full: "Infrapyloric artery" },
-                        "RGEA":  { full: "Right gastroepiploic artery" },
-                        "ASPDA": { full: "Anterior superior pancreaticoduodenal artery" },
-                        "SA":    { full: "Splenic artery" },
-                        "LGEA":  { full: "Left gastroepiploic artery" },
+                        "CT":      { full: "Celiac trunk" },
+                        "LGA":     { full: "Left gastric artery" },
+                        "CHA":     { full: "Common hepatic artery" },
+                        "RGA":     { full: "Right gastric artery" },
+                        "PHA":     { full: "Proper hepatic artery" },
+                        "RHA":     { full: "Right hepatic artery" },
+                        "LHA":     { full: "Left hepatic artery" },
+                        "GDA":     { full: "Gastroduodenal artery" },
+                        "IPA":     { full: "Infrapyloric artery" },
+                        "RGEA":    { full: "Right gastroepiploic artery" },
+                        "ASPDA":   { full: "Anterior superior pancreaticoduodenal artery" },
+                        "SA":      { full: "Splenic artery" },
+                        "LGEA":    { full: "Left gastroepiploic artery" },
                         "Ob LGEA": { full: "Omental branch of left gastroepiploic artery" },
-                        "SGA":   { full: "Short gastric artery" },
-                        "SMA":   { full: "Superior mesenteric artery" },
-                        "RCA":   { full: "Right colic artery" },
-                        "MCA":   { full: "Middle colic artery" },
-                        "LCA":   { full: "Left colic artery" },
+                        "SGA":     { full: "Short gastric artery" },
+                        "SMA":     { full: "Superior mesenteric artery" },
+                        "ICA":     { full: "Ileo-colic artery" },
+                        "RCA":     { full: "Right colic artery" },
+                        "MCA":     { full: "Middle colic artery" },
+                        "LCA":     { full: "Left colic artery" },
+                        "IMA":     { full: "Inferior Mesenteric artery" },
+                        "MA":      { full: "Marginal artery" },
+                        "SRA":     { full: "Superior Rectal artery" },
+                        "MRA":     { full: "Middle Rectal artery" },
                     }
                 },
                 3: {
@@ -587,16 +571,75 @@
                         "SGV":   { full: "Short gastric vein" },
                         "LGEV":  { full: "Left gastroepiploic vein" },
                         "RGV":   { full: "Right gastric vein" },
+                        "ICV":   { full: "Ileo-colic vein" },
                         "RCV":   { full: "Right colic vein" },
+                        "GCV":   { full: "Gastro colic vein" },
                         "MCV":   { full: "Middle colic vein" },
                         "LCV":   { full: "Left colic vein" },
                         "LHV":   { full: "Left hepatic vein" },
                         "RHV":   { full: "Right hepatic vein" },
                         "MHV":   { full: "Middle hepatic vein" },
                         "IVC":   { full: "Inferior Vena Cava" },
+                        "IMV":   { full: "Inferior Mesenteric vein" },
+                        "MV":    { full: "Marginal vein" },
+                        "SRV":   { full: "Superior Rectal vein" },
+                        "MRV":   { full: "Middle Rectal vein" },
+                    }
+                },
+                4: {
+                    name: "LN", full: "Lymph Node",
+                    sub: {
+                        "1 LND":    { full: "Left paracardial LND" },
+                        "2 LND":    { full: "Right paracardial LND" },
+                        "3a LND":   { full: "Lesser curvature LND (3a)" },
+                        "3b LND":   { full: "Lesser curvature LND (3b)" },
+                        "4sa LND":  { full: "Left greater curvature LND (short gastric artery)" },
+                        "4sb LND":  { full: "Left greater curvature LND (left gastroepiploic artery)" },
+                        "4d LND":   { full: "Left greater curvature LND (right gastroepiploic artery)" },
+                        "5 LND":    { full: "Supraduodenal LND" },
+                        "6 LND":    { full: "Infrapyloric LND" },
+                        "7 LND":    { full: "Left gastric LND" },
+                        "8a LND":   { full: "Common hepatic LND (anterior)" },
+                        "8p LND":   { full: "Common hepatic LND (posterior)" },
+                        "9 LND":    { full: "Celiac LND" },
+                        "10 LND":   { full: "Splenic hilar LND" },
+                        "11p LND":  { full: "Proximal splenic LND" },
+                        "11d LND":  { full: "Distal splenic LND" },
+                        "12a LND":  { full: "Hepatoduodenal LND (12a)" },
+                        "12b LND":  { full: "Hepatoduodenal LND (12b)" },
+                        "12p LND":  { full: "Hepatoduodenal LND (12p)" },
+                        "13 LND":   { full: "Posterior surface of Pancreatic head LND" },
+                        "14a LND":  { full: "Superior Mesenteric Artery LND" },
+                        "14v LND":  { full: "Superior Mesenteric Vein LND" },
+                        "15 LND":   { full: "Middle colic vessels LND" },
+                        "16a1 LND": { full: "Paraaortic LND (Diaphragmatic Aortic Hiatus)" },
+                        "16a2 LND": { full: "Paraaortic LND (Celiac artery - Left renal vein)" },
+                        "16b1 LND": { full: "Paraaortic LND (Left renal vein - Inferior mesenteric artery)" },
+                        "16b2 LND": { full: "Paraaortic LND (Left renal vein - Inferior mesenteric artery)" },
+                    }
+                },
+                5: {
+                    name: "N", full: "Nerve",
+                    sub: {
+                        "SHPN": { full: "Superior hypogastric plexus" },
+                        "HGN":  { full: "Hypogastric nerves" },
+                        "PSN":  { full: "Pelvic splanchnic nerves" },
+                    }
+                },
+                6: {
+                    name: "F", full: "Fascia",
+                    sub: {
+                        "MRF": { full: "Mesorectal fascia" },
+                        "PSF": { full: "Presacral fascia" },
+                        "WF":  { full: "Waldeyer's fascia" },
+                        "DF":  { full: "Denonvilliers' fascia" },
+                        "GF":  { full: "Gerota's fascia" },
+                        "TF":  { full: "Toldt's fascia" },
+                        "MF":  { full: "Mesocolic fascia" },
                     }
                 },
             },
+            structureSheet: "1",   // current Structure tab id (matches structureDefinitions key)
             frameStructures: {},
             bboxStart: null, bboxCurrent: null, isDrawingBbox: false,
             tasksList: [], toolsList: [], csvModified: false, timelineStart: null, timelineEnd: null,
@@ -841,6 +884,8 @@
             frameReportTextarea.value = opData[String(fIdx)] || "";
             updatePhaseBadge(fIdx);
             updateStructureBadge(fIdx);
+            // inline structure panel checkbox state reflects the current frame
+            if ($("structureList")) renderStructureList();
         }
 
         function saveCurrentFrameReport(fIdx) {
@@ -942,7 +987,9 @@
                     const row = document.createElement("label");
                     row.className = "phase-sub" + (isChecked ? " checked" : "");
                     row.title = fullLabel;   // native browser tooltip on hover
-                    row.innerHTML = `<input type="checkbox" ${isChecked ? "checked" : ""}><span>${subKey}</span>`;
+                    row.innerHTML = `<input type="checkbox" ${isChecked ? "checked" : ""}>
+                        <span style="line-height:1.25;"><span style="font-weight:600;">${subKey}</span>
+                        <span style="color:var(--text-sub); font-size:11px; display:block;">${fullLabel}</span></span>`;
                     row.querySelector("input").onchange = (e) => {
                         const set = new Set((state.framePhases[curFrame] || getEffectivePhases(curFrame).phases));
                         if (e.target.checked) set.add(subKey); else set.delete(subKey);
@@ -978,7 +1025,8 @@
         }
 
         function openPhaseModal() {
-            if (!state.imageLoaded) { showToast("Load a video/image first", true); return; }
+            // No video required — you can browse the taxonomy anytime.
+            // If nothing's loaded yet, selections just aren't persisted (save is a no-op).
             renderPhaseGrid();
             $("phaseModal").classList.add("show");
         }
@@ -1031,81 +1079,80 @@
             const data = res && res.structures ? res.structures : {};
             state.frameStructures = (data && data.frames) ? data.frames : {};
         }
-        function renderStructureGrid() {
-            const grid = $("structureGrid");
-            const chipRow = $("structureChipRow");
-            grid.innerHTML = "";
+        // Inline Structure panel (right sidebar). Tabs = categories (Or/Art/V/LN/N/F),
+        // scrollable list = sub-items with multi-select checkboxes. Same sparse-keyframe
+        // carry-forward semantics as Phase.
+        state.structureSearchQuery = "";
+
+        function renderStructureTabs() {
+            const tabs = $("structureTabs");
+            tabs.innerHTML = "";
+            Object.keys(state.structureDefinitions).forEach(topKey => {
+                const def = state.structureDefinitions[topKey];
+                const btn = document.createElement("button");
+                btn.className = "sheet-tab" + (String(state.structureSheet) === String(topKey) ? " active" : "");
+                btn.dataset.structureSheet = topKey;
+                btn.title = def.full || def.name;
+                btn.innerText = def.name;
+                btn.onclick = () => {
+                    state.structureSheet = topKey;
+                    renderStructureTabs();
+                    renderStructureList();
+                };
+                tabs.appendChild(btn);
+            });
+        }
+
+        function renderStructureList() {
+            const list = $("structureList");
+            list.innerHTML = "";
+            const def = state.structureDefinitions[state.structureSheet] || state.structureDefinitions[1];
+            if (!def) return;
             const curFrame = currentPhaseFrame();
             const currentSelection = new Set((state.frameStructures[curFrame] || getEffectiveStructures(curFrame).structures));
+            const q = (state.structureSearchQuery || "").toLowerCase();
 
-            Object.keys(state.structureDefinitions).forEach(topKey => {
-                const p = state.structureDefinitions[topKey];
-                const col = document.createElement("div");
-                col.className = "phase-col";
-                const header = document.createElement("div");
-                header.className = "phase-col-header";
-                header.innerHTML = `<div style="font-size:15px; font-weight:700; color:#c4b5fd;">${p.name}</div>` +
-                    (p.full ? `<div style="font-size:11px; color:var(--text-sub); margin-top:2px; font-weight:400;">${p.full}</div>` : "");
-                col.appendChild(header);
-                const body = document.createElement("div");
-                body.className = "phase-col-body";
-                col.appendChild(body);
-                Object.keys(p.sub || {}).forEach(subKey => {
-                    const entry = p.sub[subKey];
-                    const fullLabel = (entry && typeof entry === "object") ? (entry.full || "") : (entry || "");
-                    const isChecked = currentSelection.has(subKey);
-                    const row = document.createElement("label");
-                    row.className = "phase-sub" + (isChecked ? " checked" : "");
-                    row.title = fullLabel;
-                    row.innerHTML = `<input type="checkbox" ${isChecked ? "checked" : ""}><span>${subKey}</span>`;
-                    row.querySelector("input").onchange = (e) => {
-                        const set = new Set((state.frameStructures[curFrame] || getEffectiveStructures(curFrame).structures));
-                        if (e.target.checked) set.add(subKey); else set.delete(subKey);
-                        const inheritedNow = new Set(getEffectiveStructures(curFrame - 1).structures);
-                        const newArr = Array.from(set).sort();
-                        const sameAsInherited = newArr.length === inheritedNow.size && newArr.every(v => inheritedNow.has(v));
-                        if (sameAsInherited) delete state.frameStructures[curFrame];
-                        else state.frameStructures[curFrame] = newArr;
-                        saveStructuresToServer();
-                        renderStructureGrid();
-                        updateStructureBadge(curFrame);
-                    };
-                    body.appendChild(row);
-                });
-                grid.appendChild(col);
-            });
+            Object.keys(def.sub || {}).forEach(subKey => {
+                const entry = def.sub[subKey];
+                const fullLabel = (entry && typeof entry === "object") ? (entry.full || "") : (entry || "");
+                if (q && !subKey.toLowerCase().includes(q) && !fullLabel.toLowerCase().includes(q)) return;
 
-            chipRow.innerHTML = "";
-            const eff = getEffectiveStructures(curFrame);
-            eff.structures.forEach(s => {
-                const c = document.createElement("span");
-                c.className = "phase-chip" + (eff.inherited ? " inherited" : "");
-                c.style.borderColor = "#c4b5fd";
-                c.style.color = "#c4b5fd";
-                c.innerText = s;
-                chipRow.appendChild(c);
+                const isChecked = currentSelection.has(subKey);
+                const row = document.createElement("label");
+                row.className = "class-item" + (isChecked ? " active" : "");
+                row.style.cursor = "pointer";
+                row.title = fullLabel;
+                row.innerHTML = `
+                    <input type="checkbox" ${isChecked ? "checked" : ""} style="accent-color: #a78bfa; margin-right: 6px;">
+                    <span style="flex:1; font-size:13px;"><span style="font-weight:600; color:#c4b5fd;">${subKey}</span> <span style="color:var(--text-sub);">— ${fullLabel}</span></span>`;
+                row.querySelector("input").onchange = (e) => {
+                    const set = new Set((state.frameStructures[curFrame] || getEffectiveStructures(curFrame).structures));
+                    if (e.target.checked) set.add(subKey); else set.delete(subKey);
+                    const inheritedNow = new Set(getEffectiveStructures(curFrame - 1).structures);
+                    const newArr = Array.from(set).sort();
+                    const sameAsInherited = newArr.length === inheritedNow.size && newArr.every(v => inheritedNow.has(v));
+                    if (sameAsInherited) delete state.frameStructures[curFrame];
+                    else state.frameStructures[curFrame] = newArr;
+                    saveStructuresToServer();
+                    renderStructureList();
+                    updateStructureBadge(curFrame);
+                };
+                list.appendChild(row);
             });
-            if (eff.structures.length === 0) {
-                const c = document.createElement("span");
-                c.className = "phase-chip inherited";
-                c.innerText = "(nothing set yet — select to begin)";
-                chipRow.appendChild(c);
+            if (!list.children.length) {
+                list.innerHTML = `<div style="font-size:13px; color:var(--text-sub); padding:6px;">No matches in this category.</div>`;
             }
         }
-        function openStructureModal() {
-            if (!state.imageLoaded) { showToast("Load a video/image first", true); return; }
-            renderStructureGrid();
-            $("structureModal").classList.add("show");
-        }
-        function closeStructureModal() { $("structureModal").classList.remove("show"); }
-        $("openStructureBtn").onclick = openStructureModal;
-        $("closeStructureBtn").onclick = closeStructureModal;
-        $("structureModal").onclick = (e) => { if (e.target.id === "structureModal") closeStructureModal(); };
+
+        // legacy helper name kept: callers of renderStructureGrid() now render inline list.
+        function renderStructureGrid() { renderStructureTabs(); renderStructureList(); }
+
+        $("structureSearchInput").oninput = (e) => { state.structureSearchQuery = e.target.value.trim(); renderStructureList(); };
         $("clearStructureBtn").onclick = () => {
             const curFrame = currentPhaseFrame();
             delete state.frameStructures[curFrame];
             saveStructuresToServer();
-            renderStructureGrid();
+            renderStructureList();
             updateStructureBadge(curFrame);
         };
 
@@ -1706,11 +1753,10 @@
                 else openPhaseModal();
                 return;
             }
-            // Ctrl+Shift+S: toggle structure popup
+            // Ctrl+Shift+S: focus the inline Structure search box (the panel is always visible now)
             if ((e.ctrlKey||e.metaKey) && e.shiftKey && key==="s") {
                 e.preventDefault();
-                if ($("structureModal").classList.contains("show")) closeStructureModal();
-                else openStructureModal();
+                const el = $("structureSearchInput"); if (el) { el.focus(); el.select(); }
                 return;
             }
             if (tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
@@ -1783,6 +1829,8 @@
         // 초기 렌더
         renderClassList();
         renderOperatorUI();
+        renderStructureTabs();
+        renderStructureList();
     </script>
 </body>
 </html>
