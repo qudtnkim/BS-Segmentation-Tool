@@ -1,0 +1,177 @@
+# Annotation Taxonomy
+
+Gastric + colorectal surgery annotation taxonomies used by BS-Segmentation-Tool.
+Leaf labels are the abbreviations that get saved to JSON; the text after `—` is the tooltip / full name.
+
+Change (2026-08): LND category moved from Phase → Structure (as **LN**); Phase gains **Om** (Omentectomy) and colorectal items in VL/OT/OR; Structure gains **LN**, **N** (Nerve), **F** (Fascia).
+
+---
+
+## Surgical Phase (5 categories, 43 sub-phases)
+
+- **Root**
+  - **Om** — Omentectomy (2)
+    - PO — Partial Omentectomy
+    - TO — Total Omentectomy
+  - **VL** — Vessel Ligation (15)
+    - LGEV — Left Gastro Epiploic Vessel Ligation
+    - RGEV — Right Gastro Epiploic Vessel Ligation
+    - RGV — Right Gastric Vessel Ligation
+    - LGV — Left Gastric Vessel Ligation
+    - SGV — Short Gastric Vessel Ligation
+    - PGV — Posterior Gastric Vessel Ligation
+    - RCV — Right Colic Vessel Ligation
+    - MCV — Middle Colic Vessel Ligation
+    - ICVL — Ileocolic Vessel Ligation
+    - RCVL — Right Colic Vessel Ligation
+    - MCVL — Middle Colic Vessel Ligation
+    - RBMCVL — Middle Colic Vessel Right Branch Ligation
+    - LCVL — Left Colic Vessel Ligation
+    - IMVL — Inferior Mesenteric Vessel Ligation
+    - MRVL — Middle Rectal Vessel Ligation
+  - **OT** — Organ Transection (7)
+    - DT — Duodenum Transection
+    - ST — Stomach Transection
+    - ET — Esophagus Transection
+    - JT — Jejunum Transection
+    - CT — Colon Transection
+    - IT — Ileum Transection
+    - RT — Rectum Transection
+  - **OR** — Organ Reconstruction (8)
+    - GJ — GastroJejunostomy
+    - GD — GastroDuodenostomy
+    - EJ — EsophagoJejunostomy
+    - JJ — JejunoJejunostomy
+    - EG — EsophagoGastrostomy
+    - IC — Ileocolostomy
+    - CC — Colocolostomy
+    - CR — Colorectostomy
+  - **Etc** — Miscellaneous (11)
+    - TP — Trocar Placement
+    - PE — Peritoneal Exploration
+    - WC — Washing Cytology
+    - MDC — Mesenteric Defect Closure
+    - LT — Liver Traction
+    - GI — Gauze Insertion
+    - GR — Gauze Retrieval
+    - BC — Bleeding Control
+    - Irr — Irrigation
+    - SR — Specimen Removal
+    - DI — Drain Insertion
+
+---
+
+## Anatomical Structure (6 categories, 105 sub-structures)
+
+- **Root**
+  - **Or** — Organ (20)
+    - Sto — Stomach
+    - Eso — Esophagus
+    - Duo — Duodenum
+    - SI — Small Intestine
+    - Lv — Liver
+    - Panc — Pancreas
+    - Spl — Spleen
+    - Col — Colon
+    - Rec — Rectum
+    - Mscol — Mesocolon
+    - Gb — Gallbladder
+    - Diap — Diaphragm
+    - Crus — Crus muscle
+    - Fal — Falciform ligament
+    - Rlig — Round ligament
+    - App — Appendix
+    - Ut — Uterus
+    - Ov — Ovary
+    - Lu — Lung
+    - H — Heart
+  - **Art** — Artery (24)
+    - CT — Celiac trunk
+    - LGA — Left gastric artery
+    - CHA — Common hepatic artery
+    - RGA — Right gastric artery
+    - PHA — Proper hepatic artery
+    - RHA — Right hepatic artery
+    - LHA — Left hepatic artery
+    - GDA — Gastroduodenal artery
+    - IPA — Infrapyloric artery
+    - RGEA — Right gastroepiploic artery
+    - ASPDA — Anterior superior pancreaticoduodenal artery
+    - SA — Splenic artery
+    - LGEA — Left gastroepiploic artery
+    - Ob LGEA — Omental branch of left gastroepiploic artery
+    - SGA — Short gastric artery
+    - SMA — Superior mesenteric artery
+    - ICA — Ileo-colic artery
+    - RCA — Right colic artery
+    - MCA — Middle colic artery
+    - LCA — Left colic artery
+    - IMA — Inferior Mesenteric artery
+    - MA — Marginal artery
+    - SRA — Superior Rectal artery
+    - MRA — Middle Rectal artery
+  - **V** — Vein (24)
+    - LGV — Left gastric vein
+    - SV — Splenic vein
+    - PV — Portal vein
+    - SMV — Superior mesenteric vein
+    - GCT — Gastrocolic trunk
+    - RGEV — Right gastroepiploic vein
+    - ASPDV — Anterior superior pancreaticoduodenal vein
+    - ARCV — Accessary right colic vein
+    - SGV — Short gastric vein
+    - LGEV — Left gastroepiploic vein
+    - RGV — Right gastric vein
+    - ICV — Ileo-colic vein
+    - RCV — Right colic vein
+    - GCV — Gastro colic vein
+    - MCV — Middle colic vein
+    - LCV — Left colic vein
+    - LHV — Left hepatic vein
+    - RHV — Right hepatic vein
+    - MHV — Middle hepatic vein
+    - IVC — Inferior Vena Cava
+    - IMV — Inferior Mesenteric vein
+    - MV — Marginal vein
+    - SRV — Superior Rectal vein
+    - MRV — Middle Rectal vein
+  - **LN** — Lymph Node (27)
+    - 1 LND — Left paracardial LND
+    - 2 LND — Right paracardial LND
+    - 3a LND — Lesser curvature LND (3a)
+    - 3b LND — Lesser curvature LND (3b)
+    - 4sa LND — Left greater curvature LND (short gastric artery)
+    - 4sb LND — Left greater curvature LND (left gastroepiploic artery)
+    - 4d LND — Left greater curvature LND (right gastroepiploic artery)
+    - 5 LND — Supraduodenal LND
+    - 6 LND — Infrapyloric LND
+    - 7 LND — Left gastric LND
+    - 8a LND — Common hepatic LND (anterior)
+    - 8p LND — Common hepatic LND (posterior)
+    - 9 LND — Celiac LND
+    - 10 LND — Splenic hilar LND
+    - 11p LND — Proximal splenic LND
+    - 11d LND — Distal splenic LND
+    - 12a LND — Hepatoduodenal LND (12a)
+    - 12b LND — Hepatoduodenal LND (12b)
+    - 12p LND — Hepatoduodenal LND (12p)
+    - 13 LND — Posterior surface of Pancreatic head LND
+    - 14a LND — Superior Mesenteric Artery LND
+    - 14v LND — Superior Mesenteric Vein LND
+    - 15 LND — Middle colic vessels LND
+    - 16a1 LND — Paraaortic LND (Diaphragmatic Aortic Hiatus)
+    - 16a2 LND — Paraaortic LND (Celiac artery – Left renal vein)
+    - 16b1 LND — Paraaortic LND (Left renal vein – Inferior mesenteric artery)
+    - 16b2 LND — Paraaortic LND (Left renal vein – Inferior mesenteric artery)
+  - **N** — Nerve (3)
+    - SHPN — Superior hypogastric plexus
+    - HGN — Hypogastric nerves
+    - PSN — Pelvic splanchnic nerves
+  - **F** — Fascia (7)
+    - MRF — Mesorectal fascia
+    - PSF — Presacral fascia
+    - WF — Waldeyer's fascia
+    - DF — Denonvilliers' fascia
+    - GF — Gerota's fascia
+    - TF — Toldt's fascia
+    - MF — Mesocolic fascia
