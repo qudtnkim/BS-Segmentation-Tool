@@ -6,10 +6,13 @@ openpyxl>=3.1,<4
 imageio-ffmpeg>=0.4.9,<1
 
 # --- Optional: AI mask auto-propose ---
-# MobileSAM (primary, ~40MB weight, ~5-10x faster than SAM2 Hiera Tiny on CPU):
+# MobileSAM (primary, ~40MB weight — bundled as mobile_sam.pt in the repo,
+# ~5-10x faster than SAM2 Hiera Tiny on CPU). Runtime import needs timm, which is why we
+# list it explicitly below. Package itself:
+#   pip install timm
 #   pip install git+https://github.com/ChaoningZhang/MobileSAM.git
-#   (also needs torch — the run.bat / run.sh installer picks the right CUDA build)
 # SAM 2 (fallback):
 #   pip install "sam2 @ git+https://github.com/facebookresearch/segment-anything-2.git"
 # Whisper (optional STT):
 #   pip install openai-whisper soundfile
+timm>=1.0

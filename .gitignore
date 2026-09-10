@@ -2,6 +2,8 @@
 *.mp4
 *.avi
 *.pt
+# ...but the bundled MobileSAM weight ships with the repo so offline installs work.
+!mobile_sam.pt
 
 # Generated Data
 *_reports.json

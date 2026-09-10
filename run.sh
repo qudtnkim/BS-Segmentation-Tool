@@ -65,16 +65,18 @@ else
     echo "[OK] Whisper already available."
 fi
 
-# ---- 6a. MobileSAM (primary, ~40MB, 5-10x faster than SAM2 Hiera Tiny on CPU)
+# ---- 6a. MobileSAM (primary, ~40MB weight bundled in-repo, 5-10x faster than SAM 2 Hiera Tiny on CPU)
+# Full-import probe — mobile_sam pulls timm at import, so a shallow install-check misses that.
 if ! "$VENV_PY" -c "from mobile_sam import sam_model_registry" >/dev/null 2>&1; then
-    echo "[INSTALL] MobileSAM not found - installing from GitHub..."
+    echo "[INSTALL] MobileSAM not found - installing from GitHub (offline-safe once cached)..."
+    "$VENV_PY" -m pip install timm -q
     if "$VENV_PY" -m pip install git+https://github.com/ChaoningZhang/MobileSAM.git -q; then
         echo "[OK] MobileSAM installed."
     else
         echo "[WARN] MobileSAM install failed. Falling back to SAM 2 attempt."
     fi
 else
-    echo "[OK] MobileSAM already available."
+    echo "[OK] MobileSAM already available. Weight file 'mobile_sam.pt' ships with the repo."
 fi
 
 # ---- 6b. SAM 2 (fallback backend - honored only when MobileSAM unavailable or BS_USE_MOBILESAM=0)

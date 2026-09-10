@@ -208,12 +208,15 @@ if !errorlevel! neq 0 (
 )
 echo.
 
-REM ---- 6a. MobileSAM (primary, ~40MB, ~5-10x faster than SAM2 Hiera Tiny on CPU)
+REM ---- 6a. MobileSAM (primary, ~40MB weight bundled in-repo, ~5-10x faster than SAM 2 Hiera Tiny on CPU)
+REM Full-import probe (not just import mobile_sam) — the package pulls timm at import time,
+REM so an install where timm is missing looks OK to a shallow check but fails at first use.
 "%VENV_PY%" -c "from mobile_sam import sam_model_registry" >nul 2>nul
 set "MSAM_PRESENT=!errorlevel!"
 if !MSAM_PRESENT! equ 0 goto MSAM_OK
 
-echo [INSTALL] MobileSAM not found - installing from GitHub...
+echo [INSTALL] MobileSAM not found - installing from GitHub (offline-safe once cached)...
+"%VENV_PY%" -m pip install timm -q
 "%VENV_PY%" -m pip install git+https://github.com/ChaoningZhang/MobileSAM.git -q
 set "MSAM_ERR=!errorlevel!"
 if !MSAM_ERR! neq 0 (
@@ -224,7 +227,7 @@ echo [OK] MobileSAM installed.
 goto SAM2_STEP
 
 :MSAM_OK
-echo [OK] MobileSAM already available.
+echo [OK] MobileSAM already available. Weight file 'mobile_sam.pt' ships with the repo.
 
 :SAM2_STEP
 REM ---- 6b. SAM 2 (fallback - only tried if user forces BS_USE_MOBILESAM=0 later)
