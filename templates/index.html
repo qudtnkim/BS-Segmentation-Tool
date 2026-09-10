@@ -104,12 +104,14 @@
         .step-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
         .step-input { width: 60px; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 8px; color: #fff; font-size: 13px; outline: none; text-align: center; }
 
-        .phase-modal { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; width: 780px; max-width: 95vw; max-height: 85vh; display: flex; flex-direction: column; padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .phase-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        /* Resizable — grip in bottom-right corner (native browser handle via `resize: both`).
+           The header also drags the whole modal so it can be repositioned off the canvas. */
+        .phase-modal { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; width: min(1400px, 96vw); height: min(88vh, 900px); min-width: 640px; min-height: 400px; max-width: 98vw; max-height: 96vh; display: flex; flex-direction: column; padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); resize: both; overflow: hidden; position: relative; }
+        .phase-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; user-select: none; }
         .phase-modal-title { font-size: 16px; font-weight: 600; color: #a5b4fc; }
         .phase-modal-hint  { font-size: 11px; color: var(--text-sub); margin-top: 4px; }
-        .phase-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; overflow-y: auto; padding: 4px; min-height: 0; }
-        .phase-col { background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 4px; max-height: 62vh; }
+        .phase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; overflow-y: auto; padding: 4px; min-height: 0; flex: 1; }
+        .phase-col { background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: hidden; }
         .phase-col-header { padding-bottom: 6px; border-bottom: 1px solid var(--border-color); text-align: center; flex-shrink: 0; }
         .phase-col-body { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding-right: 2px; }
         .phase-sub { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 13px; color: var(--text-main); user-select: none; }
@@ -135,6 +137,7 @@
         .preset-btn { flex: 1; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-sub); padding: 4px 0; border-radius: 4px; font-size: 12px; cursor: pointer; min-width: 40px; }
         .preset-btn:hover { color: var(--text-main); border-color: var(--accent-hover); }
         .preset-btn.active { background: rgba(99,102,241,0.2); border-color: var(--accent-color); color: var(--accent-hover); font-weight: 600; }
+        .class-item.drawing-active { outline: 1px solid #fbbf24; background: rgba(251,191,36,0.08); }
     </style>
 </head>
 <body>
@@ -151,13 +154,6 @@
             <button class="btn btn-sec" id="selectVideoBtn">🎞️ Select Video</button>
             <input type="text" class="dir-input" id="directoryInput" placeholder="SurgVU Directory or File path...">
             <button class="btn" id="loadDirBtn">Load</button>
-        </div>
-        <div id="surgeryTypeWrap" style="display:flex; gap:6px; align-items:center;">
-            <span style="font-size:12px; color:var(--text-sub); font-weight:600; text-transform:uppercase;">Surgery Type</span>
-            <select id="surgeryTypeSelect" class="operator-select" style="min-width:220px;" title="Video-level surgery classification. Saved to &lt;video&gt;_meta.json.">
-                <option value="">(unset)</option>
-            </select>
-            <button class="btn btn-sec" id="addSurgeryTypeBtn" style="padding:6px 10px; font-size:12px;" title="Add a new surgery type">＋</button>
         </div>
     </header>
 
@@ -182,9 +178,10 @@
             <div class="diagnostic-report-panel">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
                     <span style="font-size: 15px; font-weight:600; color: #a5b4fc;">📝 Frame Description / Clinical Log</span>
-                    <div style="display:flex; gap:6px; align-items:center;">
+                    <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                         <button class="btn btn-sm" id="undoBtn" title="Undo mask / bbox edit (Ctrl+Z)" style="padding:6px 10px; font-size:13px; background:var(--input-bg); border:1px solid var(--border-color); border-radius:4px;">↶ Undo</button>
                         <button class="btn btn-sm" id="redoBtn" title="Redo (Ctrl+Y)" style="padding:6px 10px; font-size:13px; background:var(--input-bg); border:1px solid var(--border-color); border-radius:4px;">↷ Redo</button>
+                        <button class="btn btn-sm" id="openSurgeryTypeBtn" title="Video-level surgery classification (higher than Phase)" style="padding:6px 12px; font-size:13px; background:#7c3aed; border-radius:4px;">🩺 Surgery Type: <span id="surgeryTypeBtnLabel" style="opacity:0.85;">(unset)</span></button>
                         <button class="btn btn-sm" id="openPhaseBtn" style="padding:6px 12px; font-size:13px; background:var(--accent-color); border-radius:4px;">🏥 Phase</button>
                         <button class="btn btn-sm" id="exportExcelBtn" style="padding:6px 12px; font-size:13px; background:#10b981; border-radius:4px;">📊 Export Excel</button>
                     </div>
@@ -313,9 +310,10 @@
                         style="padding:3px 8px; font-size:11px; border-color:var(--danger-color); color:var(--danger-color);">Clear frame</button>
             </div>
             <div style="font-size:11px; color:var(--text-sub); margin-bottom:4px; line-height:1.4;">
-                🏷️ Tag which anatomy is <b>visible</b> in this frame (multi-select).
-                To <b>draw</b> a mask on an organ, add it as an Instrument Class above and paint there.
+                🏷️ Checkbox = tag anatomy visible in this frame (multi-select).
+                🎨 = start drawing a mask on that anatomy (adds it to Instrument Classes with a fixed color).
             </div>
+            <div id="structureActiveDrawHint" style="display:none; font-size:12px; color:#a5b4fc; background:rgba(99,102,241,0.12); border:1px solid var(--accent-color); border-radius:4px; padding:4px 8px; margin-bottom:4px;"></div>
             <div class="sheet-tabs" id="structureTabs"></div>
             <input type="text" class="class-add-input" id="structureSearchInput" placeholder="🔍 Search structures..." style="flex: none; width: 100%; margin-bottom: 2px;">
             <div class="class-selector-list" id="structureList" style="max-height: 260px;"></div>
@@ -353,8 +351,11 @@
                     <button class="btn-tool" id="bboxBtn">📦 Bbox</button>
                 </div>
                 <div style="display:flex; justify-content:space-between; font-size:13px; align-items:center; background: var(--input-bg); padding: 10px; border-radius: 6px;">
-                    <span>✨ AI Mask Auto-Propose</span>
+                    <span>✨ AI Mask Auto-Propose <span id="samBackendBadge" style="font-size:10px; color:var(--text-sub); margin-left:4px;">(loading…)</span></span>
                     <input type="checkbox" id="aiAutoPropose" checked style="accent-color: var(--accent-color); transform: scale(1.2);">
+                </div>
+                <div style="font-size:10px; color:var(--text-sub); margin-top:-8px; line-height:1.4;">
+                    On = SAM refines each frame (slower, better fit). Off = instant copy carry-forward (fastest).
                 </div>
                 <button class="btn" id="saveBtn" style="width:100%; justify-content:center; font-weight:600; background: #10b981; padding: 12px;">💾 마스크/Bbox 최종 파일 저장</button>
             </div>
@@ -373,6 +374,28 @@
             <div style="display:flex; justify-content:flex-end; gap:5px; margin-top: 10px;">
                 <button id="cancelBrowserBtn" class="btn btn-sec">Cancel</button>
                 <button id="confirmBrowserBtn" class="btn" style="background: #10b981;">Select</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="surgeryTypeModal">
+        <div class="phase-modal" style="width: min(720px, 92vw); height: auto; max-height: 80vh;">
+            <div class="phase-modal-header">
+                <div>
+                    <div class="phase-modal-title" style="color:#c4b5fd;">🩺 Surgery Type (video-level big category)</div>
+                    <div class="phase-modal-hint">Applies to the whole video. Higher hierarchy than Phase. Saved to &lt;video&gt;_meta.json.</div>
+                </div>
+                <button class="btn btn-sec" id="clearSurgeryTypeBtn" style="padding:6px 12px; font-size:13px; border-color:var(--danger-color); color:var(--danger-color);">Clear</button>
+            </div>
+            <input type="text" class="class-add-input" id="surgeryTypeSearch" placeholder="🔍 Filter surgery types..." style="margin-bottom:8px;">
+            <div class="class-selector-list" id="surgeryTypeList" style="flex:1; max-height:none;"></div>
+            <div class="class-add-row" style="margin-top:8px;">
+                <input type="text" class="class-add-input" id="newSurgeryTypeName" placeholder="Add a new surgery type (e.g. Robotic Whipple)...">
+                <button class="btn" id="addSurgeryTypeBtn" style="padding:6px 12px; font-size:13px;">＋ Add</button>
+            </div>
+            <div class="phase-modal-footer">
+                <span id="surgeryTypeCurrent" style="font-size:13px; color:var(--text-sub);">Current: (unset)</span>
+                <button class="btn" id="closeSurgeryTypeBtn" style="background:#10b981;">Done</button>
             </div>
         </div>
     </div>
@@ -1323,28 +1346,59 @@
         }
 
         // ── Surgery Type (video-level meta) ──────────────────────────────
-        function renderSurgeryTypeDropdown() {
-            const sel = $("surgeryTypeSelect");
-            if (!sel) return;
-            sel.innerHTML = "";
-            const opt0 = document.createElement("option");
-            opt0.value = ""; opt0.innerText = "(unset)";
-            sel.appendChild(opt0);
-            const all = [...BUILTIN_SURGERY_TYPES, ...state.customSurgeryTypes];
+        // Now a modal picker sitting on the Frame Description bar next to Phase.
+        // The header label mirrors the current selection so it's readable at a glance.
+        state.surgeryTypeSearchQuery = "";
+        function updateSurgeryTypeButtonLabel() {
+            const lbl = $("surgeryTypeBtnLabel");
+            if (lbl) lbl.innerText = state.surgeryType || "(unset)";
+            const cur = $("surgeryTypeCurrent");
+            if (cur) cur.innerText = state.surgeryType ? `Current: ${state.surgeryType}` : "Current: (unset)";
+        }
+        function renderSurgeryTypeList() {
+            const list = $("surgeryTypeList");
+            if (!list) return;
+            list.innerHTML = "";
+            const q = (state.surgeryTypeSearchQuery || "").toLowerCase();
+            const all = [...BUILTIN_SURGERY_TYPES];
+            state.customSurgeryTypes.forEach(n => { if (!all.includes(n)) all.push(n); });
+            // Preserve a loaded value that's neither builtin nor custom (legacy imports).
+            if (state.surgeryType && !all.includes(state.surgeryType)) all.push(state.surgeryType);
             all.forEach(name => {
-                const opt = document.createElement("option");
-                opt.value = name; opt.innerText = name;
-                if (name === state.surgeryType) opt.selected = true;
-                sel.appendChild(opt);
+                if (q && !name.toLowerCase().includes(q)) return;
+                const row = document.createElement("div");
+                row.className = "class-item" + (name === state.surgeryType ? " active" : "");
+                row.style.cursor = "pointer";
+                const isCustom = !BUILTIN_SURGERY_TYPES.includes(name);
+                row.innerHTML = `
+                    <span style="flex:1; font-size:13px;">${name}${isCustom ? ' <span style="font-size:10px; color:var(--text-sub);">(custom)</span>' : ""}</span>
+                    ${isCustom ? '<button class="class-del-btn" title="Remove this custom type">✕</button>' : ""}`;
+                row.onclick = () => {
+                    state.surgeryType = name;
+                    saveMetaToServer();
+                    updateSurgeryTypeButtonLabel();
+                    renderSurgeryTypeList();
+                    showToast(`Surgery type: ${name}`);
+                };
+                const del = row.querySelector(".class-del-btn");
+                if (del) del.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!confirm(`Remove custom surgery type "${name}"?`)) return;
+                    state.customSurgeryTypes = state.customSurgeryTypes.filter(n => n !== name);
+                    if (state.surgeryType === name) state.surgeryType = "";
+                    saveMetaToServer();
+                    updateSurgeryTypeButtonLabel();
+                    renderSurgeryTypeList();
+                };
+                list.appendChild(row);
             });
-            // A surgeryType loaded from disk that's not in the builtin list nor the customs
-            // still needs to show as selected — treat it as an implicit custom.
-            if (state.surgeryType && !all.includes(state.surgeryType)) {
-                const opt = document.createElement("option");
-                opt.value = state.surgeryType; opt.innerText = state.surgeryType; opt.selected = true;
-                sel.appendChild(opt);
+            if (!list.children.length) {
+                list.innerHTML = `<div style="font-size:13px; color:var(--text-sub); padding:6px;">No surgery types match your filter.</div>`;
             }
         }
+        // Legacy alias — kept so other code paths that used to render the header dropdown
+        // still work; they now update the button label instead.
+        function renderSurgeryTypeDropdown() { updateSurgeryTypeButtonLabel(); renderSurgeryTypeList(); }
 
         async function loadMetaFromServer(vidName) {
             const res = await postJSON("/api/load_meta", { directory: state.directory, video_name: vidName || "" });
@@ -1404,6 +1458,59 @@
             });
         }
 
+        // Structure item → class ID. When a user first draws on a structure, we lazily register
+        // it as a class in state.classes with sheet="structure" + meta.structureKey. From then on
+        // the existing draw / redraw / save pipeline treats it exactly like an instrument class.
+        // Colors are seeded from CLASS_PALETTE by a stable hash of the key so the same anatomy
+        // gets the same color across sessions.
+        function _structureColorFor(subKey) {
+            let h = 0; for (let i=0; i<subKey.length; i++) h = (h * 31 + subKey.charCodeAt(i)) >>> 0;
+            return CLASS_PALETTE[h % CLASS_PALETTE.length];
+        }
+        function _findStructureClassId(subKey) {
+            for (const cid of Object.keys(state.classes)) {
+                const c = state.classes[cid];
+                if (c && c.sheet === "structure" && c.meta && c.meta.structureKey === subKey) return parseInt(cid);
+            }
+            return null;
+        }
+        function _ensureStructureClass(subKey, categoryName) {
+            let cid = _findStructureClassId(subKey);
+            if (cid !== null) return cid;
+            const color = _structureColorFor(subKey);
+            const newId = (Math.max(-1, ...Object.keys(state.classes).map(Number)) + 1);
+            state.classes[newId] = {
+                name: `${subKey} · ${categoryName}`, color, rgb: hexToRgb(color),
+                sheet: "structure", meta: { structureKey: subKey, category: categoryName }
+            };
+            state.classOrder.push(newId);
+            saveClassesToServer();
+            return newId;
+        }
+        function activateStructureForDrawing(subKey, categoryName, fullLabel) {
+            const cid = _ensureStructureClass(subKey, categoryName);
+            state.currentClass = cid;
+            renderClassList();
+            renderStructureList();
+            const hint = $("structureActiveDrawHint");
+            if (hint) {
+                hint.style.display = "block";
+                const color = state.classes[cid].color;
+                hint.innerHTML = `🎨 Drawing on <b>${subKey}</b> — ${fullLabel}
+                    <span style="display:inline-block; width:10px; height:10px; background:${color}; border-radius:2px; vertical-align:middle; margin-left:6px; border:1px solid var(--border-color);"></span>
+                    <button style="float:right; background:transparent; border:none; color:var(--text-sub); cursor:pointer; font-size:11px;" id="structDrawStopBtn">(cancel)</button>`;
+                const stop = $("structDrawStopBtn");
+                if (stop) stop.onclick = () => {
+                    // Pick the first non-structure class as fallback draw target
+                    const firstInstr = state.classOrder.find(c => state.classes[c] && (state.classes[c].sheet || "laparoscopic") !== "structure");
+                    if (firstInstr !== undefined) state.currentClass = firstInstr;
+                    hint.style.display = "none";
+                    renderClassList();
+                    renderStructureList();
+                };
+            }
+        }
+
         function renderStructureList() {
             const list = $("structureList");
             list.innerHTML = "";
@@ -1419,13 +1526,20 @@
                 if (q && !subKey.toLowerCase().includes(q) && !fullLabel.toLowerCase().includes(q)) return;
 
                 const isChecked = currentSelection.has(subKey);
-                const row = document.createElement("label");
-                row.className = "class-item" + (isChecked ? " active" : "");
-                row.style.cursor = "pointer";
+                const existingClsId = _findStructureClassId(subKey);
+                const isDrawing = existingClsId !== null && state.currentClass === existingClsId;
+                const swatchColor = existingClsId !== null ? state.classes[existingClsId].color : _structureColorFor(subKey);
+
+                const row = document.createElement("div");
+                row.className = "class-item" + (isChecked ? " active" : "") + (isDrawing ? " drawing-active" : "");
+                row.style.cursor = "default";
                 row.title = fullLabel;
                 row.innerHTML = `
-                    <input type="checkbox" ${isChecked ? "checked" : ""} style="accent-color: #a78bfa; margin-right: 6px;">
-                    <span style="flex:1; font-size:13px;"><span style="font-weight:600; color:#c4b5fd;">${subKey}</span> <span style="color:var(--text-sub);">— ${fullLabel}</span></span>`;
+                    <input type="checkbox" ${isChecked ? "checked" : ""} style="accent-color: #a78bfa; margin-right: 4px; cursor:pointer;">
+                    <span style="display:inline-block; width:10px; height:10px; background:${swatchColor}; border-radius:2px; margin-right:4px; opacity:${existingClsId !== null ? '1' : '0.35'}; border:1px solid var(--border-color);"></span>
+                    <span style="flex:1; font-size:13px;"><span style="font-weight:600; color:#c4b5fd;">${subKey}</span> <span style="color:var(--text-sub);">— ${fullLabel}</span></span>
+                    <button class="struct-draw-btn" title="Set as current brush target${existingClsId===null?' (adds to Instrument Classes)':''}" style="background:transparent; border:1px solid var(--border-color); color:${isDrawing?'#fbbf24':'var(--text-sub)'}; cursor:pointer; padding:2px 6px; border-radius:4px; font-size:12px;">${isDrawing?'✎ drawing':'🎨'}</button>`;
+
                 row.querySelector("input").onchange = (e) => {
                     const set = new Set((state.frameStructures[curFrame] || getEffectiveStructures(curFrame).structures));
                     if (e.target.checked) set.add(subKey); else set.delete(subKey);
@@ -1437,6 +1551,10 @@
                     saveStructuresToServer();
                     renderStructureList();
                     updateStructureBadge(curFrame);
+                };
+                row.querySelector(".struct-draw-btn").onclick = (e) => {
+                    e.stopPropagation();
+                    activateStructureForDrawing(subKey, def.name || def.full || "Structure", fullLabel);
                 };
                 list.appendChild(row);
             });
@@ -1474,11 +1592,14 @@
             if (!state.directory) return;
             const plain = {};
             Object.keys(state.classes).forEach(cid => {
+                const c = state.classes[cid];
                 plain[cid] = {
-                    name: state.classes[cid].name,
-                    color: state.classes[cid].color,
-                    sheet: state.classes[cid].sheet || "laparoscopic",
+                    name: c.name,
+                    color: c.color,
+                    sheet: c.sheet || "laparoscopic",
                 };
+                // structure-derived classes need their structureKey mapping to survive reload
+                if (c.meta) plain[cid].meta = c.meta;
             });
             postJSON("/api/save_classes", { directory: state.directory, classes: { classes: plain, order: state.classOrder } });
         }
@@ -1487,8 +1608,9 @@
 
         function setActiveSheet(sheet) {
             state.currentSheet = sheet;
-            document.querySelectorAll(".sheet-tab").forEach(b => b.classList.toggle("active", b.dataset.sheet === sheet));
-            // If the active class doesn't belong to the newly-selected sheet, pick the first that does.
+            // Scope the toggle to Instrument tabs only — Structure tabs also carry .sheet-tab
+            // (same visual style), and a global toggle would silently drop their active state.
+            document.querySelectorAll(".sheet-tab[data-sheet]").forEach(b => b.classList.toggle("active", b.dataset.sheet === sheet));
             const curCls = state.classes[state.currentClass];
             if (!curCls || (curCls.sheet || "laparoscopic") !== sheet) {
                 const firstInSheet = state.classOrder.find(cid => state.classes[cid] && (state.classes[cid].sheet || "laparoscopic") === sheet);
@@ -1496,7 +1618,7 @@
             }
             renderClassList();
         }
-        document.querySelectorAll(".sheet-tab").forEach(b => b.onclick = () => setActiveSheet(b.dataset.sheet));
+        document.querySelectorAll(".sheet-tab[data-sheet]").forEach(b => b.onclick = () => setActiveSheet(b.dataset.sheet));
 
         function renderClassList() {
             classListDiv.innerHTML = "";
@@ -2238,27 +2360,58 @@
         $("redoBtn").onclick = performRedo;
         updateUndoRedoButtons();
 
-        // ── Surgery Type dropdown handlers ──────────────────────────────
-        $("surgeryTypeSelect").onchange = function() {
-            state.surgeryType = this.value;
+        // ── Surgery Type modal handlers ─────────────────────────────────
+        $("openSurgeryTypeBtn").onclick = () => {
+            renderSurgeryTypeList();
+            updateSurgeryTypeButtonLabel();
+            $("surgeryTypeModal").classList.add("show");
+            setTimeout(() => { const s = $("surgeryTypeSearch"); if (s) s.focus(); }, 40);
+        };
+        $("closeSurgeryTypeBtn").onclick = () => $("surgeryTypeModal").classList.remove("show");
+        $("surgeryTypeModal").onclick = (e) => { if (e.target.id === "surgeryTypeModal") $("surgeryTypeModal").classList.remove("show"); };
+        $("surgeryTypeSearch").oninput = (e) => { state.surgeryTypeSearchQuery = e.target.value.trim(); renderSurgeryTypeList(); };
+        $("clearSurgeryTypeBtn").onclick = () => {
+            if (!state.surgeryType) return;
+            state.surgeryType = "";
             saveMetaToServer();
-            const wrap = $("surgeryTypeWrap");
-            if (wrap) wrap.style.outline = state.surgeryType ? "" : "1px solid var(--danger-color)";
-            showToast(state.surgeryType ? `Surgery type: ${state.surgeryType}` : "Surgery type cleared");
+            updateSurgeryTypeButtonLabel();
+            renderSurgeryTypeList();
+            showToast("Surgery type cleared");
         };
         $("addSurgeryTypeBtn").onclick = () => {
-            const name = prompt("New surgery type name:");
-            if (!name || !name.trim()) return;
-            const trimmed = name.trim();
-            if ([...BUILTIN_SURGERY_TYPES, ...state.customSurgeryTypes].includes(trimmed)) {
+            const el = $("newSurgeryTypeName");
+            const name = (el.value || "").trim();
+            if (!name) return;
+            if ([...BUILTIN_SURGERY_TYPES, ...state.customSurgeryTypes].includes(name)) {
                 showToast("Already in the list", true); return;
             }
-            state.customSurgeryTypes.push(trimmed);
-            state.surgeryType = trimmed;
-            renderSurgeryTypeDropdown();
+            state.customSurgeryTypes.push(name);
+            state.surgeryType = name;
+            el.value = "";
             saveMetaToServer();
-            showToast(`Added surgery type: ${trimmed}`);
+            updateSurgeryTypeButtonLabel();
+            renderSurgeryTypeList();
+            showToast(`Added surgery type: ${name}`);
         };
+
+        // ── SAM backend badge ────────────────────────────────────────────
+        // Show which model is actually loaded so users know whether they're on the fast path.
+        (async function initBackendBadge() {
+            const badge = $("samBackendBadge");
+            if (!badge) return;
+            try {
+                const r = await fetch("/api/sam_backend");
+                const j = await r.json();
+                if (!j.available) {
+                    badge.innerText = "(no SAM installed)";
+                    badge.style.color = "var(--danger-color)";
+                } else {
+                    const backend = j.backend === "mobile_sam" ? "MobileSAM" : "SAM 2";
+                    badge.innerText = `(${backend} · ${j.device})`;
+                    badge.style.color = j.device === "cuda" ? "#10b981" : "var(--text-sub)";
+                }
+            } catch(e) { badge.innerText = ""; }
+        })();
 
         // 초기 렌더
         renderClassList();

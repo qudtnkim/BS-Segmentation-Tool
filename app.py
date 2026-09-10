@@ -50,31 +50,83 @@ CHECKPOINT_PATH = os.path.normpath(os.path.join(BASE_DIR, "sam2_hiera_tiny.pt"))
 CONFIG_NAME = "configs/sam2/sam2_hiera_t.yaml"
 WEIGHTS_URL = "https://dl.fbaipublicfiles.com/segment_anything_2/072824/sam2_hiera_tiny.pt"
 
+# MobileSAM — distilled ViT-Tiny SAM-1 backbone (~40MB weight, ~5-10× faster on CPU
+# than SAM 2 Hiera Tiny). Same predictor API as SAM 1, so refinement calls stay
+# unchanged. Set BS_USE_MOBILESAM=0 to force the SAM 2 path.
+MOBILE_SAM_PATH = os.path.normpath(os.path.join(BASE_DIR, "mobile_sam.pt"))
+MOBILE_SAM_URL  = "https://huggingface.co/dhkim2810/MobileSAM/resolve/main/mobile_sam.pt"
+
 _sam_predictor = None
+_predictor_backend = None   # "mobile_sam" or "sam2"
 _cached_key = None
 
 
-def get_sam_predictor():
-    """SAM 2 predictor를 지연 로드한다. 패키지/가중치가 없으면 None을 돌려준다."""
-    global _sam_predictor
-    if _sam_predictor is not None:
-        return _sam_predictor
+def _download(url: str, dest: str):
+    print(f"[SAM] Downloading {url} -> {dest}")
+    import urllib.request
+    urllib.request.urlretrieve(url, dest)
+
+
+def _try_load_mobile_sam():
+    """MobileSAM 우선 로드. 실패시 None."""
+    try:
+        # mobile_sam은 pip 이름과 import 이름이 동일 (github.com/ChaoningZhang/MobileSAM).
+        from mobile_sam import sam_model_registry, SamPredictor
+        if not os.path.exists(MOBILE_SAM_PATH):
+            _download(MOBILE_SAM_URL, MOBILE_SAM_PATH)
+        model = sam_model_registry["vit_t"](checkpoint=MOBILE_SAM_PATH)
+        model.to(device=device)
+        model.eval()
+        pred = SamPredictor(model)
+        print(f"[MobileSAM] Predictor ready on [{device}].")
+        return pred
+    except Exception as e:
+        print(f"[MobileSAM] Unavailable ({e}). Falling back to SAM 2.")
+        return None
+
+
+def _try_load_sam2():
+    """SAM 2 Hiera Tiny — legacy 백엔드."""
     try:
         from sam2.build_sam import build_sam2
         from sam2.sam2_image_predictor import SAM2ImagePredictor
-
         if not os.path.exists(CHECKPOINT_PATH):
-            print(f"[SAM2] Weights not found. Downloading to {CHECKPOINT_PATH}...")
-            import urllib.request
-            urllib.request.urlretrieve(WEIGHTS_URL, CHECKPOINT_PATH)
-
+            _download(WEIGHTS_URL, CHECKPOINT_PATH)
         model = build_sam2(CONFIG_NAME, CHECKPOINT_PATH, device=device)
-        _sam_predictor = SAM2ImagePredictor(model)
-        print("[SAM2] Predictor initialized.")
+        pred = SAM2ImagePredictor(model)
+        print(f"[SAM2] Predictor ready on [{device}].")
+        return pred
     except Exception as e:
         print(f"[SAM2] Init failed: {e}")
-        _sam_predictor = None
+        return None
+
+
+def get_sam_predictor():
+    """MobileSAM 우선, 없으면 SAM2. 둘 다 실패하면 None."""
+    global _sam_predictor, _predictor_backend
+    if _sam_predictor is not None:
+        return _sam_predictor
+    if os.environ.get("BS_USE_MOBILESAM", "1") == "1":
+        _sam_predictor = _try_load_mobile_sam()
+        if _sam_predictor is not None:
+            _predictor_backend = "mobile_sam"
+            return _sam_predictor
+    _sam_predictor = _try_load_sam2()
+    if _sam_predictor is not None:
+        _predictor_backend = "sam2"
     return _sam_predictor
+
+
+@app.route('/api/sam_backend', methods=['GET'])
+def sam_backend_info():
+    """UI가 현재 어떤 SAM 백엔드가 살아 있는지 표시할 수 있도록."""
+    # Force initialization if not yet
+    get_sam_predictor()
+    return jsonify({
+        "backend": _predictor_backend,
+        "device": device,
+        "available": _sam_predictor is not None,
+    })
 
 
 # ---- 공통 유틸 -------------------------------------------------------------

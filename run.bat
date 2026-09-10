@@ -208,24 +208,42 @@ if !errorlevel! neq 0 (
 )
 echo.
 
-REM ---- 6. SAM 2 (optional - auto install attempted; PyPI "sam2" package, no Git required)
+REM ---- 6a. MobileSAM (primary, ~40MB, ~5-10x faster than SAM2 Hiera Tiny on CPU)
+"%VENV_PY%" -c "from mobile_sam import sam_model_registry" >nul 2>nul
+set "MSAM_PRESENT=!errorlevel!"
+if !MSAM_PRESENT! equ 0 goto MSAM_OK
+
+echo [INSTALL] MobileSAM not found - installing from GitHub...
+"%VENV_PY%" -m pip install git+https://github.com/ChaoningZhang/MobileSAM.git -q
+set "MSAM_ERR=!errorlevel!"
+if !MSAM_ERR! neq 0 (
+    echo [WARN] MobileSAM install failed. Falling back to SAM 2.
+    goto SAM2_STEP
+)
+echo [OK] MobileSAM installed.
+goto SAM2_STEP
+
+:MSAM_OK
+echo [OK] MobileSAM already available.
+
+:SAM2_STEP
+REM ---- 6b. SAM 2 (fallback - only tried if user forces BS_USE_MOBILESAM=0 later)
 "%VENV_PY%" -c "from sam2.build_sam import build_sam2" >nul 2>nul
 set "SAM2_PRESENT=!errorlevel!"
 if !SAM2_PRESENT! equ 0 goto SAM2_OK
 
-echo [INSTALL] SAM 2 not found - installing from PyPI...
+echo [INSTALL] SAM 2 fallback not found - installing from PyPI...
 "%VENV_PY%" -m pip install sam2 -q
 set "SAM2_ERR=!errorlevel!"
 if !SAM2_ERR! neq 0 (
-    echo [WARN] SAM 2 install failed. AI mask propagation will be disabled.
-    echo   Retry manually: "%VENV_PY%" -m pip install sam2
+    echo [INFO] SAM 2 install skipped. MobileSAM will be the only AI backend.
     goto SAM2_DONE
 )
-echo [OK] SAM 2 installed.
+echo [OK] SAM 2 fallback installed.
 goto SAM2_DONE
 
 :SAM2_OK
-echo [OK] SAM 2 already available.
+echo [OK] SAM 2 fallback already available.
 
 :SAM2_DONE
 echo.
