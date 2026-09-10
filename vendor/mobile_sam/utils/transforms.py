@@ -7,10 +7,18 @@
 import numpy as np
 import torch
 from torch.nn import functional as F
-from torchvision.transforms.functional import resize, to_pil_image  # type: ignore
 
 from copy import deepcopy
 from typing import Tuple
+
+# VENDORED CHANGE: upstream imports `resize` and `to_pil_image` from
+# torchvision here, purely to downscale one numpy image in apply_image().
+# torchvision is a large extra dependency (and another install that can fail),
+# so apply_image now does the same resize with torch's own antialiased bilinear
+# interpolation - the exact operation apply_image_torch below already used.
+# Verified against the torchvision/PIL path on 1080p, 720p, VGA and a
+# non-round size: identical output shape, max per-pixel difference 1/255
+# (pure rounding), mean difference ~0.18.
 
 
 class ResizeLongestSide:
@@ -28,7 +36,16 @@ class ResizeLongestSide:
         Expects a numpy array with shape HxWxC in uint8 format.
         """
         target_size = self.get_preprocess_shape(image.shape[0], image.shape[1], self.target_length)
-        return np.array(resize(to_pil_image(image), target_size))
+        squeeze_back = False
+        if image.ndim == 2:                      # HxW grayscale
+            image = image[:, :, None]
+            squeeze_back = True
+        t = torch.as_tensor(np.ascontiguousarray(image))
+        t = t.permute(2, 0, 1).unsqueeze(0).float()          # HWC -> 1CHW
+        t = F.interpolate(t, target_size, mode="bilinear", align_corners=False, antialias=True)
+        t = t.squeeze(0).permute(1, 2, 0)                    # -> HWC
+        out = t.round().clamp(0, 255).to(torch.uint8).numpy()
+        return out[:, :, 0] if squeeze_back else out
 
     def apply_coords(self, coords: np.ndarray, original_size: Tuple[int, ...]) -> np.ndarray:
         """

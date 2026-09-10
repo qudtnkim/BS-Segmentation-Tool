@@ -142,6 +142,25 @@
         .preset-btn:hover { color: var(--text-main); border-color: var(--accent-hover); }
         .preset-btn.active { background: rgba(99,102,241,0.2); border-color: var(--accent-color); color: var(--accent-hover); font-weight: 600; }
         .class-item.drawing-active { outline: 1px solid #fbbf24; background: rgba(251,191,36,0.08); }
+
+        /* Floating window-in-window (timeline). Draggable by its title bar,
+           resizable from the bottom-right grip, and remembers its geometry. */
+        .float-win { position: fixed; z-index: 800; background: var(--panel-bg); border: 1px solid var(--accent-color);
+                     border-radius: 10px; box-shadow: 0 12px 34px rgba(0,0,0,0.6); display: none;
+                     flex-direction: column; overflow: hidden; resize: both; min-width: 420px; min-height: 150px; }
+        .float-win.show { display: flex; }
+        .float-win-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+                         padding: 8px 10px; background: rgba(99,102,241,0.16); border-bottom: 1px solid var(--border-color);
+                         cursor: move; user-select: none; flex-shrink: 0; }
+        .float-win-title { font-size: 13px; font-weight: 600; color: #a5b4fc; }
+        .float-win-body { padding: 12px; overflow: auto; flex: 1; min-height: 0; }
+        .float-win-btn { background: transparent; border: 1px solid var(--border-color); color: var(--text-sub);
+                         border-radius: 4px; cursor: pointer; font-size: 12px; padding: 2px 8px; }
+        .float-win-btn:hover { color: var(--text-main); border-color: var(--accent-hover); }
+        .float-win.docked { position: static; display: block; width: auto !important; height: auto !important;
+                            resize: none; box-shadow: none; border-color: var(--border-color); max-width: 900px;
+                            width: 100% !important; margin-bottom: 8px; }
+        .float-win.docked .float-win-bar { cursor: default; }
     </style>
 </head>
 <body>
@@ -200,6 +219,7 @@
                         <button class="btn btn-sm" id="redoBtn" title="Redo (Ctrl+Y)" style="padding:6px 10px; font-size:13px; background:var(--input-bg); border:1px solid var(--border-color); border-radius:4px;">↷ Redo</button>
                         <button class="btn btn-sm" id="openSurgeryTypeBtn" title="Video-level surgery classification (higher than Phase)" style="padding:6px 12px; font-size:13px; background:#7c3aed; border-radius:4px;">🩺 Surgery Type: <span id="surgeryTypeBtnLabel" style="opacity:0.85;">(unset)</span></button>
                         <button class="btn btn-sm" id="openPhaseBtn" style="padding:6px 12px; font-size:13px; background:var(--accent-color); border-radius:4px;">🏥 Phase</button>
+                        <button class="btn btn-sm" id="toggleTimelineBtn" title="Show / hide the floating timeline window (Ctrl+T)" style="padding:6px 12px; font-size:13px; background:#0ea5e9; border-radius:4px;">⏱️ Timeline</button>
                     </div>
                 </div>
                 <div class="operator-row">
@@ -222,25 +242,7 @@
                 <textarea class="report-textarea" id="coachingTextarea" style="width: 100%; min-height:70px; margin-top:6px; border-color: rgba(251,191,36,0.6); resize: vertical;" placeholder="Coaching tip for this frame (e.g. keep the plane between fascia and vessel, avoid grasping the pancreas)."></textarea>
             </div>
 
-            <div class="collapsible-details">
-                <div class="collapsible-summary" onclick="$('timelineSection').style.display = $('timelineSection').style.display === 'none'?'block':'none'">⏱️ Expand Video Timeline & Playback Trackers</div>
-                <div id="timelineSection" style="display: none;" class="collapsible-content timeline-container">
-                    <div class="timeline-controls">
-                        <button class="btn btn-sm" id="playPauseBtn" style="width: 80px;">▶ Play</button>
-                        <button class="btn btn-sm btn-sec" id="timelinePrevBtn">◀ Prev (A)</button>
-                        <div class="step-row">
-                            <span>Step</span>
-                            <input type="number" class="step-input" id="frameStepInput" value="1" min="1" max="9999" title="Frames to skip per Prev/Next">
-                            <span>frames</span>
-                        </div>
-                        <button class="btn btn-sm btn-sec" id="timelineNextBtn">Next (D) ▶</button>
-                        <span id="frameCounter">Frame: 0 / 0</span>
-                        <span id="timeCounter">Time: 00:00 / 00:00</span>
-                    </div>
-                    <input type="range" class="timeline-slider" id="timelineSlider" min="0" max="0" value="0">
-                </div>
-            </div>
-
+            <div class="collapsible-details" id="timelineDockSlot"></div>
 
             <div class="toast" id="toast">Saved successfully.</div>
         </div>
@@ -327,6 +329,31 @@
                 <button id="cancelBrowserBtn" class="btn btn-sec">Cancel</button>
                 <button id="confirmBrowserBtn" class="btn" style="background: #10b981;">Select</button>
             </div>
+        </div>
+    </div>
+
+    <div class="float-win" id="timelineWin">
+        <div class="float-win-bar" id="timelineWinBar">
+            <span class="float-win-title">⏱️ Video Timeline &amp; Playback</span>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <button class="float-win-btn" id="timelineDockBtn" title="Dock back into the page / pop out again">⇲ Dock</button>
+                <button class="float-win-btn" id="timelineCloseBtn" title="Hide (reopen from the Timeline button)">✕</button>
+            </div>
+        </div>
+        <div class="float-win-body timeline-container">
+            <div class="timeline-controls" style="flex-wrap: wrap;">
+                <button class="btn btn-sm" id="playPauseBtn" style="width: 80px;">▶ Play</button>
+                <button class="btn btn-sm btn-sec" id="timelinePrevBtn">◀ Prev (A)</button>
+                <div class="step-row">
+                    <span>Step</span>
+                    <input type="number" class="step-input" id="frameStepInput" value="1" min="1" max="9999" title="Frames to skip per Prev/Next">
+                    <span>frames</span>
+                </div>
+                <button class="btn btn-sm btn-sec" id="timelineNextBtn">Next (D) ▶</button>
+                <span id="frameCounter">Frame: 0 / 0</span>
+                <span id="timeCounter">Time: 00:00 / 00:00</span>
+            </div>
+            <input type="range" class="timeline-slider" id="timelineSlider" min="0" max="0" value="0">
         </div>
     </div>
 
@@ -2440,6 +2467,127 @@
             else if (t.tagName === "BUTTON" && t.innerText) log("clk", "btn:" + t.innerText.trim().slice(0, 40));
         }, true);
 
+        // ── Floating timeline window ─────────────────────────────────────
+        // The timeline used to be a collapsed accordion row that was easy to miss.
+        // It is now a real window-in-window: drag by the title bar, resize from the
+        // bottom-right grip, dock it back inline, and it remembers where you left it.
+        (function setupTimelineWindow() {
+            const win  = $("timelineWin");
+            const bar  = $("timelineWinBar");
+            const dock = $("timelineDockSlot");
+            if (!win || !bar || !dock) return;
+
+            const LS_KEY = "bs_timeline_win";
+            const readState = () => {
+                try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); } catch(e) { return {}; }
+            };
+            const writeState = (patch) => {
+                try { localStorage.setItem(LS_KEY, JSON.stringify({ ...readState(), ...patch })); } catch(e) {}
+            };
+
+            function clampIntoView() {
+                const r = win.getBoundingClientRect();
+                let left = Math.min(Math.max(0, r.left), Math.max(0, window.innerWidth  - Math.min(r.width, window.innerWidth)));
+                let top  = Math.min(Math.max(0, r.top),  Math.max(0, window.innerHeight - 40));
+                win.style.left = left + "px";
+                win.style.top  = top  + "px";
+            }
+
+            function floatIt() {
+                if (win.parentElement !== document.body) document.body.appendChild(win);
+                win.classList.remove("docked");
+                const s = readState();
+                win.style.left   = (s.left   != null ? s.left   : Math.max(20, window.innerWidth - 760)) + "px";
+                win.style.top    = (s.top    != null ? s.top    : Math.max(20, window.innerHeight - 260)) + "px";
+                win.style.width  = (s.width  != null ? s.width  : 700) + "px";
+                win.style.height = (s.height != null ? s.height : 200) + "px";
+                win.classList.add("show");
+                clampIntoView();
+                $("timelineDockBtn").innerText = "⇲ Dock";
+                writeState({ docked: false, open: true });
+            }
+
+            function dockIt() {
+                dock.appendChild(win);
+                win.classList.add("docked", "show");
+                win.style.left = win.style.top = win.style.width = win.style.height = "";
+                $("timelineDockBtn").innerText = "⇱ Pop out";
+                writeState({ docked: true, open: true });
+            }
+
+            function hideIt() {
+                win.classList.remove("show");
+                writeState({ open: false });
+                log("timeline_win", "hide");
+            }
+
+            function showIt() {
+                if (readState().docked) dockIt(); else floatIt();
+                log("timeline_win", readState().docked ? "dock" : "float");
+            }
+
+            // Drag by the title bar (no-op while docked)
+            let dragging = false, offX = 0, offY = 0;
+            bar.addEventListener("mousedown", (e) => {
+                if (win.classList.contains("docked")) return;
+                if (e.target.closest(".float-win-btn")) return;   // buttons stay clickable
+                dragging = true;
+                const r = win.getBoundingClientRect();
+                offX = e.clientX - r.left;
+                offY = e.clientY - r.top;
+                e.preventDefault();
+            });
+            document.addEventListener("mousemove", (e) => {
+                if (!dragging) return;
+                win.style.left = (e.clientX - offX) + "px";
+                win.style.top  = (e.clientY - offY) + "px";
+            });
+            document.addEventListener("mouseup", () => {
+                if (!dragging) return;
+                dragging = false;
+                clampIntoView();
+                const r = win.getBoundingClientRect();
+                writeState({ left: Math.round(r.left), top: Math.round(r.top) });
+            });
+
+            // Persist size after a resize-grip drag
+            if (window.ResizeObserver) {
+                let rzTimer = null;
+                new ResizeObserver(() => {
+                    if (win.classList.contains("docked") || !win.classList.contains("show")) return;
+                    clearTimeout(rzTimer);
+                    rzTimer = setTimeout(() => {
+                        writeState({ width: Math.round(win.offsetWidth), height: Math.round(win.offsetHeight) });
+                    }, 250);
+                }).observe(win);
+            }
+
+            $("timelineDockBtn").onclick = () => {
+                if (win.classList.contains("docked")) floatIt(); else dockIt();
+                log("timeline_win", win.classList.contains("docked") ? "dock" : "float");
+            };
+            $("timelineCloseBtn").onclick = hideIt;
+            $("toggleTimelineBtn").onclick = () => {
+                if (win.classList.contains("show")) hideIt(); else showIt();
+            };
+            document.addEventListener("keydown", (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "t") {
+                    e.preventDefault();
+                    if (win.classList.contains("show")) hideIt(); else showIt();
+                }
+            });
+            window.addEventListener("resize", () => {
+                if (win.classList.contains("show") && !win.classList.contains("docked")) clampIntoView();
+            });
+
+            // Restore last session's placement; float and open by default so the
+            // timeline is visible instead of hidden behind an accordion.
+            const s = readState();
+            if (s.open === false) { win.classList.remove("show"); }
+            else if (s.docked)    { dockIt(); }
+            else                  { floatIt(); }
+        })();
+
         // ── SAM backend badge ────────────────────────────────────────────
         // Show which model is actually loaded so users know whether they're on the fast path.
         (async function initBackendBadge() {
@@ -2449,8 +2597,12 @@
                 const r = await fetch("/api/sam_backend");
                 const j = await r.json();
                 if (!j.available) {
-                    badge.innerText = "(MobileSAM unavailable — install via run.bat)";
+                    // Show the actual reason inline; "check the server console" is not
+                    // an answer when the user is looking at a browser.
+                    badge.innerText = j.error ? `(FAILED: ${j.error})` : "(MobileSAM unavailable)";
+                    badge.title = j.error || "";
                     badge.style.color = "var(--danger-color)";
+                    badge.style.whiteSpace = "normal";
                 } else {
                     badge.innerText = `(MobileSAM+CV · ${j.device})`;
                     badge.style.color = j.device === "cuda" ? "#10b981" : "var(--text-sub)";

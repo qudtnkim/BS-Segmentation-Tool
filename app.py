@@ -68,6 +68,7 @@ MOBILE_SAM_URL  = "https://huggingface.co/dhkim2810/MobileSAM/resolve/main/mobil
 VENDOR_DIR = os.path.normpath(os.path.join(BASE_DIR, "vendor"))
 
 _sam_predictor = None
+_sam_last_error = None   # surfaced to the UI so failures are visible without the console
 _cached_key = None
 # Online color prior: {class_id: [np.ndarray shape (N, 3) BGR samples]}
 # Populated when the frontend calls /api/save_coco_annotations with a mask that
@@ -92,7 +93,7 @@ def get_sam_predictor():
     mobile_sam.pt next to this file. Only torch/numpy/cv2 are required, and those
     are already core requirements.
     """
-    global _sam_predictor
+    global _sam_predictor, _sam_last_error
     if _sam_predictor is not None:
         return _sam_predictor
     try:
@@ -109,11 +110,22 @@ def get_sam_predictor():
         model.to(device=device)
         model.eval()
         _sam_predictor = SamPredictor(model)
+        _sam_last_error = None
         print(f"[MobileSAM] Predictor ready on [{device}] (vendored, no pip install needed).")
         return _sam_predictor
     except Exception as e:
         import traceback
-        print(f"[MobileSAM] Init failed: {e}")
+        # Keep the reason so the UI can show it instead of telling the user to go
+        # read a console they may not even have in front of them.
+        _sam_last_error = f"{type(e).__name__}: {e}"
+        if isinstance(e, ModuleNotFoundError):
+            _sam_last_error += (
+                f"  ->  '{e.name}' is missing. Install it into the venv: "
+                f"pip install {e.name}"
+            )
+        elif not os.path.exists(MOBILE_SAM_PATH):
+            _sam_last_error += f"  ->  weight not found at {MOBILE_SAM_PATH}"
+        print(f"[MobileSAM] Init failed: {_sam_last_error}")
         traceback.print_exc()
         return None
 
@@ -126,6 +138,7 @@ def sam_backend_info():
         "backend": "mobile_sam" if _sam_predictor is not None else None,
         "device": device,
         "available": _sam_predictor is not None,
+        "error": _sam_last_error,
     })
 
 
@@ -618,7 +631,7 @@ def sam_encode():
     predictor = get_sam_predictor()
     if predictor is None:
         return jsonify({"success": False,
-                        "error": "MobileSAM 로드 실패. 서버 콘솔의 [MobileSAM] 로그를 확인해 주세요. 수동 브러시는 계속 사용 가능합니다."}), 500
+                        "error": f"MobileSAM 로드 실패 - {_sam_last_error or 'unknown'}. 수동 브러시는 계속 사용 가능합니다."}), 500
 
     data = request.json or {}
     path = media_path(data)
@@ -648,7 +661,7 @@ def sam_refine():
     predictor = get_sam_predictor()
     if predictor is None:
         return jsonify({"success": False,
-                        "error": "MobileSAM unavailable. Use the manual brush."}), 500
+                        "error": f"MobileSAM unavailable - {_sam_last_error or 'unknown'}. Use the manual brush."}), 500
 
     data = request.json or {}
     path = media_path(data)
