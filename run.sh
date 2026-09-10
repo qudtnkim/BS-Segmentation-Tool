@@ -18,22 +18,7 @@ for candidate in python3 python; do
     fi
 done
 if [ -z "$PY" ]; then
-    echo "[ERROR] Python not found."
-    if [ "$(uname)" = "Darwin" ]; then
-        if command -v brew >/dev/null 2>&1; then
-            echo "  Install with:  brew install python@3.12"
-        else
-            echo "  Install Homebrew (https://brew.sh) then:  brew install python@3.12"
-            echo "  Or download from https://www.python.org/"
-        fi
-    else
-        # Guess the distro's package manager for a copy-pasteable hint
-        if command -v apt >/dev/null 2>&1;    then echo "  Install with:  sudo apt install python3.12 python3.12-venv"
-        elif command -v dnf >/dev/null 2>&1;  then echo "  Install with:  sudo dnf install python3.12"
-        elif command -v pacman >/dev/null 2>&1; then echo "  Install with:  sudo pacman -S python"
-        else echo "  Install Python 3.10+ via your package manager or https://www.python.org/"
-        fi
-    fi
+    echo "[ERROR] Python not found. Install Python 3.10+ from https://www.python.org/"
     exit 1
 fi
 echo "[OK] Python found: $($PY --version)"
@@ -80,18 +65,16 @@ else
     echo "[OK] Whisper already available."
 fi
 
-# ---- 6a. MobileSAM (primary, ~40MB weight bundled in-repo, 5-10x faster than SAM 2 Hiera Tiny on CPU)
-# Full-import probe — mobile_sam pulls timm at import, so a shallow install-check misses that.
+# ---- 6a. MobileSAM (primary, ~40MB, 5-10x faster than SAM2 Hiera Tiny on CPU)
 if ! "$VENV_PY" -c "from mobile_sam import sam_model_registry" >/dev/null 2>&1; then
-    echo "[INSTALL] MobileSAM not found - installing from GitHub (offline-safe once cached)..."
-    "$VENV_PY" -m pip install timm -q
+    echo "[INSTALL] MobileSAM not found - installing from GitHub..."
     if "$VENV_PY" -m pip install git+https://github.com/ChaoningZhang/MobileSAM.git -q; then
         echo "[OK] MobileSAM installed."
     else
         echo "[WARN] MobileSAM install failed. Falling back to SAM 2 attempt."
     fi
 else
-    echo "[OK] MobileSAM already available. Weight file 'mobile_sam.pt' ships with the repo."
+    echo "[OK] MobileSAM already available."
 fi
 
 # ---- 6b. SAM 2 (fallback backend - honored only when MobileSAM unavailable or BS_USE_MOBILESAM=0)

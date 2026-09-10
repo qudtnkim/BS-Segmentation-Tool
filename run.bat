@@ -55,46 +55,12 @@ if not defined PY (
     if !errorlevel! equ 0 set "PY=py -3"
 )
 
-REM ---- 1b. Auto-install Python via winget when nothing was found
 if not defined PY (
-    echo [INFO] Python not detected. Attempting auto-install via winget...
-    where winget >nul 2>nul
-    if !errorlevel! neq 0 (
-        echo.
-        echo [ERROR] winget not available on this machine and no Python installed.
-        echo   Options:
-        echo     1^) Windows 10 1809+ / 11: enable App Installer from Microsoft Store, then re-run this script.
-        echo     2^) Manual install: download Python 3.12 from https://www.python.org/
-        echo        Tick 'Add python.exe to PATH' during install.
-        pause
-        exit /b 1
-    )
-    echo [INFO] winget found. Installing Python 3.12 (this needs internet and may take 1-2 min)...
-    winget install --id Python.Python.3.12 -e --silent --accept-source-agreements --accept-package-agreements
-    if !errorlevel! neq 0 (
-        echo.
-        echo [ERROR] winget install failed. Install Python 3.12 manually from https://www.python.org/
-        pause
-        exit /b 1
-    )
-    echo [OK] Python 3.12 installed. Locating executable...
-    REM Current cmd's %PATH% is frozen — the freshly-installed py.exe / python.exe won't be
-    REM visible via `where` yet. Fall back to the known winget install locations for both
-    REM machine-wide and per-user installs, whichever this session actually landed in.
-    for %%P in (
-        "C:\Program Files\Python312\python.exe"
-        "%LocalAppData%\Programs\Python\Python312\python.exe"
-        "%ProgramFiles%\Python312\python.exe"
-    ) do (
-        if not defined PY if exist %%P set "PY=%%~P"
-    )
-    if not defined PY (
-        echo [ERROR] winget install reported success but python.exe not found in the expected paths.
-        echo   Close this window and re-run run.bat — Windows will have picked up the new PATH by then.
-        pause
-        exit /b 1
-    )
-    echo [OK] Using freshly installed Python at: !PY!
+    echo [ERROR] Python not found in PATH.
+    echo   Install Python 3.10-3.12 from https://www.python.org/
+    echo   Check 'Add python.exe to PATH' during install.
+    pause
+    exit /b 1
 )
 
 REM Detect version for warning
@@ -242,15 +208,12 @@ if !errorlevel! neq 0 (
 )
 echo.
 
-REM ---- 6a. MobileSAM (primary, ~40MB weight bundled in-repo, ~5-10x faster than SAM 2 Hiera Tiny on CPU)
-REM Full-import probe (not just import mobile_sam) — the package pulls timm at import time,
-REM so an install where timm is missing looks OK to a shallow check but fails at first use.
+REM ---- 6a. MobileSAM (primary, ~40MB, ~5-10x faster than SAM2 Hiera Tiny on CPU)
 "%VENV_PY%" -c "from mobile_sam import sam_model_registry" >nul 2>nul
 set "MSAM_PRESENT=!errorlevel!"
 if !MSAM_PRESENT! equ 0 goto MSAM_OK
 
-echo [INSTALL] MobileSAM not found - installing from GitHub (offline-safe once cached)...
-"%VENV_PY%" -m pip install timm -q
+echo [INSTALL] MobileSAM not found - installing from GitHub...
 "%VENV_PY%" -m pip install git+https://github.com/ChaoningZhang/MobileSAM.git -q
 set "MSAM_ERR=!errorlevel!"
 if !MSAM_ERR! neq 0 (
@@ -261,7 +224,7 @@ echo [OK] MobileSAM installed.
 goto SAM2_STEP
 
 :MSAM_OK
-echo [OK] MobileSAM already available. Weight file 'mobile_sam.pt' ships with the repo.
+echo [OK] MobileSAM already available.
 
 :SAM2_STEP
 REM ---- 6b. SAM 2 (fallback - only tried if user forces BS_USE_MOBILESAM=0 later)
