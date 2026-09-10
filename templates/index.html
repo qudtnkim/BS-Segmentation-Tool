@@ -200,7 +200,6 @@
                         <button class="btn btn-sm" id="redoBtn" title="Redo (Ctrl+Y)" style="padding:6px 10px; font-size:13px; background:var(--input-bg); border:1px solid var(--border-color); border-radius:4px;">↷ Redo</button>
                         <button class="btn btn-sm" id="openSurgeryTypeBtn" title="Video-level surgery classification (higher than Phase)" style="padding:6px 12px; font-size:13px; background:#7c3aed; border-radius:4px;">🩺 Surgery Type: <span id="surgeryTypeBtnLabel" style="opacity:0.85;">(unset)</span></button>
                         <button class="btn btn-sm" id="openPhaseBtn" style="padding:6px 12px; font-size:13px; background:var(--accent-color); border-radius:4px;">🏥 Phase</button>
-                        <button class="btn btn-sm" id="exportExcelBtn" style="padding:6px 12px; font-size:13px; background:#10b981; border-radius:4px;">📊 Export Excel</button>
                     </div>
                 </div>
                 <div class="operator-row">
@@ -211,11 +210,11 @@
                 </div>
                 <div class="report-textarea-container">
                     <textarea class="report-textarea" id="frameReportTextarea" placeholder="Select an operator above, then type the description for this frame."></textarea>
-                    <button class="stt-record-btn" id="sttRecordBtn">🎙️</button>
+                    <button class="stt-record-btn" id="sttRecordBtn" title="Voice input is off. Click to install and activate it (one-time ~200 MB download)." style="opacity:0.45;">🎙️</button>
                 </div>
             </div>
 
-            <div class="diagnostic-report-panel" style="max-width: none; width: 100%; border-color: rgba(251,191,36,0.35);">
+            <div class="diagnostic-report-panel" style="border-color: rgba(251,191,36,0.35);">
                 <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                     <span style="font-size:15px; font-weight:600; color:#fbbf24;">🎓 Surgical Coaching</span>
                     <span style="font-size:11px; color:var(--text-sub);">tip / comment for this frame — saved to &lt;video&gt;_coaching.json</span>
@@ -242,70 +241,6 @@
                 </div>
             </div>
 
-            <div class="collapsible-details">
-                <div class="collapsible-summary" onclick="$('csvSection').style.display = $('csvSection').style.display === 'none'?'block':'none'">📊 Expand SurgVU Ground-Truth Logs (tasks.csv / tools.csv)</div>
-                <div id="csvSection" style="display: none;" class="collapsible-content">
-                    <div class="csv-tabs">
-                        <button class="csv-tab active" id="tabTasksBtn">Step/Task Segments (tasks.csv)</button>
-                        <button class="csv-tab" id="tabToolsBtn">Tool Install/Uninstall (tools.csv)</button>
-                    </div>
-                    
-                    <div id="tabTasksContent">
-                        <div class="csv-form-row">
-                            <div class="csv-form-group">
-                                <label>Task Name</label>
-                                <input type="text" class="csv-input" id="taskNameInput" placeholder="e.g. Skills application" list="defaultTasksList">
-                                <datalist id="defaultTasksList"><option value="Skills application"><option value="Surgical step"><option value="Resting/Idle"></datalist>
-                            </div>
-                            <div class="csv-form-row" style="grid-template-columns: 1fr 1fr 1fr 1fr; margin-bottom: 0;">
-                                <div class="csv-form-group"><label>Start Part</label><input type="number" class="csv-input" id="taskStartPartInput" value="1" min="1"></div>
-                                <div class="csv-form-group"><label>Start (s)</label><input type="number" step="0.001" class="csv-input" id="taskStartInput" value="0"></div>
-                                <div class="csv-form-group"><label>Stop Part</label><input type="number" class="csv-input" id="taskStopPartInput" value="1" min="1"></div>
-                                <div class="csv-form-group"><label>Stop (s)</label><input type="number" step="0.001" class="csv-input" id="taskStopInput" value="0"></div>
-                            </div>
-                        </div>
-                        <div style="display: flex; justify-content: flex-end; gap: 8px;">
-                            <button class="btn btn-sm" id="addTaskBtn" style="background-color: var(--accent-hover); font-size: 13px; padding: 7px 14px;">+ Add Task</button>
-                        </div>
-                        <div class="csv-table-container">
-                            <table class="csv-table" id="tasksTable">
-                                <thead><tr><th>Index</th><th>Start Part</th><th>Start Time(s)</th><th>Stop Part</th><th>Stop Time(s)</th><th>Task Name</th><th>Action</th></tr></thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    
-                    <div id="tabToolsContent" style="display: none;">
-                        <div class="csv-form-row" style="grid-template-columns: 1fr 1.2fr 1.2fr;">
-                            <div class="csv-form-group">
-                                <label>Arm</label>
-                                <select class="csv-select" id="toolArmInput"><option value="TBD">TBD</option><option value="USM1">USM1</option><option value="USM2">USM2</option><option value="USM3">USM3</option><option value="USM4">USM4</option></select>
-                            </div>
-                            <div class="csv-form-group"><label>Commercial Name</label><input type="text" class="csv-input" id="toolCommNameInput"></div>
-                            <div class="csv-form-group"><label>Groundtruth Name</label><input type="text" class="csv-input" id="toolGtNameInput"></div>
-                        </div>
-                        <div class="csv-form-row" style="grid-template-columns: 1fr 1.2fr 1fr 1.2fr;">
-                            <div class="csv-form-group"><label>Inst Pt</label><input type="number" class="csv-input" id="toolInstallPartInput" value="1"></div>
-                            <div class="csv-form-group"><label>Inst Time</label><input type="text" class="csv-input" id="toolInstallInput" value="00:00:00.000000"></div>
-                            <div class="csv-form-group"><label>Uninst Pt</label><input type="number" class="csv-input" id="toolUninstallPartInput" value="1"></div>
-                            <div class="csv-form-group"><label>Uninst Time</label><input type="text" class="csv-input" id="toolUninstallInput" value="00:00:00.000000"></div>
-                        </div>
-                        <div style="display: flex; justify-content: flex-end; gap: 8px;">
-                            <button class="btn btn-sm" id="addToolBtn" style="background-color: var(--accent-hover); font-size: 13px; padding: 7px 14px;">+ Add Tool</button>
-                        </div>
-                        <div class="csv-table-container">
-                            <table class="csv-table" id="toolsTable">
-                                <thead><tr><th>Index</th><th>Inst Pt</th><th>Inst Time</th><th>Uninst Pt</th><th>Uninst Time</th><th>Arm</th><th>Commercial Name</th><th>Groundtruth</th><th>Action</th></tr></thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 10px;">
-                        <span id="csvStatusText" style="font-size: 13px; color: var(--text-sub);">No unsaved CSV changes</span>
-                        <button class="btn btn-sm" id="saveCsvBtn" style="background-color: #10b981; font-size: 13px; padding: 7px 14px;">Save CSV Annotations</button>
-                    </div>
-                </div>
-            </div>
 
             <div class="toast" id="toast">Saved successfully.</div>
         </div>
@@ -823,7 +758,7 @@
             // the Frame Description model — but kept in a separate JSON so the two don't collide.
             coaching: {},
             bboxStart: null, bboxCurrent: null, isDrawingBbox: false,
-            tasksList: [], toolsList: [], csvModified: false, timelineStart: null, timelineEnd: null,
+            timelineStart: null, timelineEnd: null,
             undoStack: [], redoStack: []
         };
 
@@ -971,8 +906,6 @@
                 state.reports = loaded;
             }
             renderOperatorUI();
-
-            await loadCsvRecords();
 
             if (type === "video") {
                 const vName = state.videos[idx];
@@ -1601,18 +1534,6 @@
             updateStructureBadge(curFrame);
         };
 
-        $("exportExcelBtn").onclick = async () => {
-            saveCurrentFrameReport(activeReportFrame);
-            const res = await postJSON("/api/export_reports_excel", {
-                directory: state.directory,
-                video_name: state.mediaType === "video" ? state.videos[state.currentIndex] : "",
-                reports: state.reports,
-                fps: state.videoFps
-            });
-            if (res.success) alert(`Excel compiled successfully:\n${res.path}`);
-            else showToast(res.error || "Export failed", true);
-        };
-
         // ── Class 관리 ───────────────────────────────────────────────────
         function saveClassesToServer() {
             if (!state.directory) return;
@@ -1724,75 +1645,6 @@
             showToast(`Class "${name}" added to ${state.currentSheet}`);
         };
 
-        // ── CSV 관리 ─────────────────────────────────────────────────────
-        async function loadCsvRecords() {
-            if (!state.directory) return;
-            const vidName = state.mediaType === "video" ? state.videos[state.currentIndex] : "";
-            try {
-                const res = await postJSON("/api/get_csv_annotations", { directory: state.directory, video_name: vidName });
-                state.tasksList = res.success ? (res.tasks || []) : [];
-                state.toolsList = res.success ? (res.tools || []) : [];
-                renderCsvTables(); setCsvModified(false);
-            } catch(e) { state.tasksList = []; state.toolsList = []; renderCsvTables(); }
-        }
-
-        function renderCsvTables() {
-            const tasksTbody = document.querySelector("#tasksTable tbody");
-            tasksTbody.innerHTML = "";
-            state.tasksList.forEach((rec, idx) => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `<td>${rec.index}</td><td>${rec.start_part||"1"}</td><td>${parseFloat(rec.start_time).toFixed(3)}</td><td>${rec.stop_part||"1"}</td><td>${parseFloat(rec.stop_time).toFixed(3)}</td><td>${rec.groundtruth_taskname}</td><td><button class="csv-btn-del" data-idx="${idx}">Del</button></td>`;
-                tr.querySelector(".csv-btn-del").onclick = () => { state.tasksList.splice(idx, 1); renderCsvTables(); setCsvModified(true); };
-                tasksTbody.appendChild(tr);
-            });
-            const toolsTbody = document.querySelector("#toolsTable tbody");
-            toolsTbody.innerHTML = "";
-            state.toolsList.forEach((rec, idx) => {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `<td>${rec.index}</td><td>${rec.install_case_part||"1"}</td><td>${rec.install_case_time}</td><td>${rec.uninstall_case_part||"1"}</td><td>${rec.uninstall_case_time}</td><td>${rec.arm}</td><td>${rec.commercial_toolname}</td><td>${rec.groundtruth_toolname}</td><td><button class="csv-btn-del" data-idx="${idx}">Del</button></td>`;
-                tr.querySelector(".csv-btn-del").onclick = () => { state.toolsList.splice(idx, 1); renderCsvTables(); setCsvModified(true); };
-                toolsTbody.appendChild(tr);
-            });
-        }
-
-        function setCsvModified(val) {
-            state.csvModified = val;
-            const txt = $("csvStatusText");
-            if (val) { txt.innerText = "Unsaved CSV modifications"; txt.style.color = "var(--danger-hover)"; }
-            else      { txt.innerText = "No unsaved CSV changes";   txt.style.color = "var(--text-sub)"; }
-        }
-
-        $("tabTasksBtn").onclick = function() { this.classList.add("active"); $("tabToolsBtn").classList.remove("active"); $("tabTasksContent").style.display = "block"; $("tabToolsContent").style.display = "none"; };
-        $("tabToolsBtn").onclick = function() { this.classList.add("active"); $("tabTasksBtn").classList.remove("active"); $("tabToolsContent").style.display = "block"; $("tabTasksContent").style.display = "none"; };
-
-        $("addTaskBtn").onclick = () => {
-            const name = $("taskNameInput").value.trim();
-            const startVal = parseFloat($("taskStartInput").value), stopVal = parseFloat($("taskStopInput").value);
-            if (!name || isNaN(startVal) || isNaN(stopVal)) return alert("Valid Task Name and Times required.");
-            state.tasksList.push({ index: state.tasksList.length, start_part: $("taskStartPartInput").value||1, start_time: startVal, stop_part: $("taskStopPartInput").value||1, stop_time: stopVal, groundtruth_taskname: name });
-            renderCsvTables(); setCsvModified(true);
-        };
-
-        $("addToolBtn").onclick = () => {
-            const inst = $("toolInstallInput").value.trim(), uninst = $("toolUninstallInput").value.trim();
-            if (!inst || !uninst) return alert("Install & Uninstall times required.");
-            state.toolsList.push({ index: state.toolsList.length, install_case_part: $("toolInstallPartInput").value||1, install_case_time: inst, uninstall_case_part: $("toolUninstallPartInput").value||1, uninstall_case_time: uninst, arm: $("toolArmInput").value, commercial_toolname: $("toolCommNameInput").value.trim(), groundtruth_toolname: $("toolGtNameInput").value.trim() });
-            renderCsvTables(); setCsvModified(true);
-        };
-
-        $("saveCsvBtn").onclick = async () => {
-            if (!state.directory) return;
-            const vidName = state.mediaType === "video" ? state.videos[state.currentIndex] : "";
-            const res = await postJSON("/api/save_csv_annotations", { directory: state.directory, video_name: vidName, tasks: state.tasksList, tools: state.toolsList });
-            if (res.success) { showToast("CSV saved!"); setCsvModified(false); }
-        };
-
-        function formatSecondsToHMSf(secVal) {
-            const t = parseFloat(secVal); if (isNaN(t)||t<0) return "00:00:00.000000";
-            const hrs=Math.floor(t/3600), mins=Math.floor((t%3600)/60), secs=Math.floor(t%60), ms=Math.floor((t%1)*1000000);
-            return `${String(hrs).padStart(2,"0")}:${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}.${String(ms).padStart(6,"0")}`;
-        }
-
         // ── AI Mask Propagation ──────────────────────────────────────────
         // Bboxes are always carried forward with a simple copy.
         // Masks: if AI Auto-Propose is on → SAM refinement (slow, better fit).
@@ -1902,8 +1754,71 @@
             return videoPlayer.duration ? Math.min(state.videoFrameCount-1, Math.round(videoPlayer.currentTime * state.videoFps)) : 0;
         }
 
-        // ── STT ─────────────────────────────────────────────────────────
+        // ── STT (off by default, activated on demand) ───────────────────
+        // Whisper is no longer installed by the launcher: it costs ~200 MB of
+        // download that most sessions never use. The first mic-button press
+        // installs the package and loads the model, then recording works normally.
+        state.sttActive = false;
+
+        async function activateSTT() {
+            const btn = $("sttRecordBtn");
+            if (!confirm(
+                "Voice input needs a one-time setup:\n" +
+                "  - openai-whisper package (~100 MB)\n" +
+                "  - speech model (~140 MB)\n\n" +
+                "This needs an internet connection and can take a few minutes.\n" +
+                "Activate now?"
+            )) return false;
+
+            btn.innerText = "⏳";
+            btn.title = "Installing voice input, please wait...";
+            showToast("Setting up voice input... this can take a few minutes.");
+            log("stt_activate_start");
+            try {
+                const res = await postJSON("/api/stt_activate", {});
+                if (res.success) {
+                    state.sttActive = true;
+                    btn.style.opacity = "1";
+                    btn.innerText = "🎙️";
+                    btn.title = "Record voice note for this frame";
+                    showToast(`Voice input ready (${res.device}).`);
+                    log("stt_activate_ok", res.device);
+                    return true;
+                }
+                btn.innerText = "🎙️";
+                btn.title = "Voice input is off. Click to install and activate it.";
+                showToast(res.error || "Voice input setup failed", true);
+                console.error("STT activation failed:", res.detail || res.error);
+                log("stt_activate_fail");
+                return false;
+            } catch (e) {
+                btn.innerText = "🎙️";
+                showToast("Voice input setup failed", true);
+                log("stt_activate_fail");
+                return false;
+            }
+        }
+
+        // Reflect real server state on load, so a machine that already has
+        // whisper doesn't make the user click through the setup prompt again.
+        (async function initSttState() {
+            try {
+                const r = await fetch("/api/stt_status");
+                const j = await r.json();
+                if (j.installed) {
+                    state.sttActive = true;
+                    const btn = $("sttRecordBtn");
+                    btn.style.opacity = "1";
+                    btn.title = "Record voice note for this frame";
+                }
+            } catch(e) { /* leave it disabled */ }
+        })();
+
         $("sttRecordBtn").onclick = async function() {
+            if (!state.sttActive) {
+                const ok = await activateSTT();
+                if (!ok) return;
+            }
             if (mediaRecorder && mediaRecorder.state === "recording") {
                 mediaRecorder.stop(); this.classList.remove("recording"); this.innerText = "⏳";
             } else {

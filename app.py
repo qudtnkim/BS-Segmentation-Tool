@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
-# app.py - BS Segmentation Tool 백엔드 (Flask + 로컬 Whisper STT + SAM 2)
+# app.py - BS Segmentation Tool 백엔드 (Flask + 로컬 Whisper STT + MobileSAM)
 
 import os
+import sys
 import re
-import csv
 import json
 import string
 
 import cv2
 import numpy as np
-import pandas as pd
 from flask import Flask, render_template, request, jsonify, send_file, Response
 
 app = Flask(__name__)
@@ -36,21 +35,37 @@ except ImportError:
     torch = None
     device = "cpu"
 
-try:
-    import whisper as _whisper_mod
-    print(f"\n[STT] Loading Whisper model on [{device}]...")
-    stt_model = _whisper_mod.load_model("base", device=device)
-    print("[STT] Ready.\n")
-except Exception as e:
-    _whisper_mod = None
-    stt_model = None
-    print(f"[STT] Whisper not available ({e}). STT disabled.\n")
+# Whisper is loaded lazily on the first /api/stt call, not at import.
+# Loading the "base" model costs several seconds every startup (and a ~140 MB
+# download the very first time) - paying that before the server can serve a
+# single page made the tool feel like it was hanging on launch.
+_whisper_mod = None
+stt_model = None
+_stt_load_failed = False
+
+
+def get_stt_model():
+    global _whisper_mod, stt_model, _stt_load_failed
+    if stt_model is not None or _stt_load_failed:
+        return stt_model
+    try:
+        import whisper as _w
+        print(f"[STT] Loading Whisper model on [{device}] (first use only)...")
+        _whisper_mod = _w
+        stt_model = _w.load_model("base", device=device)
+        print("[STT] Ready.")
+    except Exception as e:
+        _stt_load_failed = True
+        print(f"[STT] Whisper unavailable ({e}). Voice input disabled.")
+    return stt_model
 
 # MobileSAM (only backend). ViT-Tiny distilled SAM 1 (~10M params, 39 MB weight).
 # The weight ships bundled in the repo so offline installs work; if it's missing
 # for any reason we fall back to a one-shot HuggingFace mirror download.
 MOBILE_SAM_PATH = os.path.normpath(os.path.join(BASE_DIR, "mobile_sam.pt"))
 MOBILE_SAM_URL  = "https://huggingface.co/dhkim2810/MobileSAM/resolve/main/mobile_sam.pt"
+# Vendored package source lives here so no pip install of mobile_sam/timm is needed.
+VENDOR_DIR = os.path.normpath(os.path.join(BASE_DIR, "vendor"))
 
 _sam_predictor = None
 _cached_key = None
@@ -70,26 +85,36 @@ def _download(url: str, dest: str):
 
 
 def get_sam_predictor():
-    """MobileSAM only. Returns None if the package or weight is unavailable."""
+    """MobileSAM only, loaded from the vendored copy in vendor/.
+
+    Nothing here needs pip: the package source lives in vendor/mobile_sam (with
+    its timm dependency reimplemented in tiny_vit_sam.py) and the weight ships as
+    mobile_sam.pt next to this file. Only torch/numpy/cv2 are required, and those
+    are already core requirements.
+    """
     global _sam_predictor
     if _sam_predictor is not None:
         return _sam_predictor
     try:
+        # Prefer the vendored source over anything pip may have installed, so the
+        # behaviour is identical on every machine.
+        if VENDOR_DIR not in sys.path:
+            sys.path.insert(0, VENDOR_DIR)
         from mobile_sam import sam_model_registry, SamPredictor
+
         if not os.path.exists(MOBILE_SAM_PATH):
-            print(f"[MobileSAM] Weight not found at {MOBILE_SAM_PATH}. Downloading...")
+            print(f"[MobileSAM] Bundled weight missing at {MOBILE_SAM_PATH}, downloading once...")
             _download(MOBILE_SAM_URL, MOBILE_SAM_PATH)
         model = sam_model_registry["vit_t"](checkpoint=MOBILE_SAM_PATH)
         model.to(device=device)
         model.eval()
         _sam_predictor = SamPredictor(model)
-        print(f"[MobileSAM] Predictor ready on [{device}].")
+        print(f"[MobileSAM] Predictor ready on [{device}] (vendored, no pip install needed).")
         return _sam_predictor
-    except ImportError as e:
-        print(f"[MobileSAM] Import failed ({e}). Run: pip install timm && pip install git+https://github.com/ChaoningZhang/MobileSAM.git")
-        return None
     except Exception as e:
-        print(f"[MobileSAM] Init failed ({e}). AI auto-propose disabled.")
+        import traceback
+        print(f"[MobileSAM] Init failed: {e}")
+        traceback.print_exc()
         return None
 
 
@@ -500,78 +525,6 @@ def save_coco_annotations():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-# tasks/tools CSV는 '<video>_tasks.csv'(=video별) 또는 'tasks.csv'(=폴더 공용) 둘 다 지원한다.
-TASK_FIELDS = ['index', 'start_part', 'start_time', 'stop_part', 'stop_time', 'groundtruth_taskname']
-TOOL_FIELDS = ['index', 'install_case_part', 'install_case_time', 'uninstall_case_part',
-               'uninstall_case_time', 'arm', 'commercial_toolname', 'groundtruth_toolname']
-
-
-def csv_paths(directory, video_name):
-    if video_name:
-        base = os.path.splitext(video_name)[0]
-        return (os.path.join(directory, f"tasks_{base}.csv"),
-                os.path.join(directory, f"tools_{base}.csv"))
-    return (os.path.join(directory, "tasks.csv"),
-            os.path.join(directory, "tools.csv"))
-
-
-def read_csv_rows(path):
-    if not os.path.exists(path):
-        return []
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            return list(csv.DictReader(f))
-    except Exception:
-        return []
-
-
-def write_csv_rows(path, fieldnames, rows):
-    for idx, row in enumerate(rows):
-        row['index'] = idx
-    with open(path, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
-
-
-@app.route('/api/get_csv_annotations', methods=['POST'])
-def get_csv_annotations():
-    data = request.json or {}
-    directory = data.get('directory', '').strip()
-    if not directory or not os.path.exists(directory):
-        return jsonify({"success": False, "error": "Invalid directory path."}), 400
-
-    tasks_path, tools_path = csv_paths(directory, data.get('video_name', '').strip())
-    # video별 파일이 없으면 폴더 공용 파일로 폴백
-    if data.get('video_name', '').strip():
-        shared_tasks, shared_tools = csv_paths(directory, '')
-        if not os.path.exists(tasks_path):
-            tasks_path = shared_tasks
-        if not os.path.exists(tools_path):
-            tools_path = shared_tools
-
-    return jsonify({"success": True,
-                    "tasks": read_csv_rows(tasks_path),
-                    "tools": read_csv_rows(tools_path)})
-
-
-@app.route('/api/save_csv_annotations', methods=['POST'])
-def save_csv_annotations():
-    data = request.json or {}
-    directory = data.get('directory', '').strip()
-    if not directory or not os.path.exists(directory):
-        return jsonify({"success": False, "error": "Invalid directory path."}), 400
-
-    tasks_path, tools_path = csv_paths(directory, data.get('video_name', '').strip())
-    try:
-        if data.get('tasks'):
-            write_csv_rows(tasks_path, TASK_FIELDS, data['tasks'])
-        if data.get('tools'):
-            write_csv_rows(tools_path, TOOL_FIELDS, data['tools'])
-        return jsonify({"success": True, "message": "CSV annotations saved successfully."})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
 
 @app.route('/api/load_reports', methods=['POST'])
 def load_reports():
@@ -593,9 +546,56 @@ def save_reports():
 
 
 
+@app.route('/api/stt_status', methods=['GET'])
+def stt_status():
+    """Is voice input ready? Never triggers a load - just reports."""
+    try:
+        import whisper  # noqa: F401
+        installed = True
+    except Exception:
+        installed = False
+    return jsonify({"installed": installed, "loaded": stt_model is not None, "device": device})
+
+
+@app.route('/api/stt_activate', methods=['POST'])
+def stt_activate():
+    """On-demand voice-input setup, triggered by the mic button.
+
+    Whisper is not installed by the launcher any more: it is a ~100 MB package
+    plus a ~140 MB model download that most sessions never use. This installs it
+    the first time the user actually asks for voice input, then loads the model.
+    """
+    global _stt_load_failed
+    _stt_load_failed = False   # let the user retry after a previous failure
+    try:
+        import whisper  # noqa: F401
+    except ImportError:
+        try:
+            import subprocess
+            print("[STT] Installing openai-whisper on demand...")
+            proc = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "openai-whisper"],
+                capture_output=True, text=True, timeout=1800,
+            )
+            if proc.returncode != 0:
+                return jsonify({
+                    "success": False,
+                    "error": "openai-whisper install failed",
+                    "detail": (proc.stderr or "")[-1500:],
+                }), 500
+        except Exception as e:
+            return jsonify({"success": False, "error": f"install error: {e}"}), 500
+
+    model = get_stt_model()
+    if model is None:
+        return jsonify({"success": False, "error": "Whisper model failed to load"}), 500
+    return jsonify({"success": True, "device": device})
+
+
 @app.route('/api/stt', methods=['POST'])
 def native_stt_decode():
-    if stt_model is None:
+    model = get_stt_model()   # lazy: first call pays the load cost, not startup
+    if model is None:
         return jsonify({"success": False, "error": "STT unavailable: Whisper not installed. Run: pip install openai-whisper soundfile"}), 503
     if 'audio' not in request.files:
         return jsonify({"success": False, "error": "Audio missing"}), 400
@@ -603,7 +603,7 @@ def native_stt_decode():
     temp_path = os.path.join(BASE_DIR, "temp_voice.webm")
     try:
         request.files['audio'].save(temp_path)
-        result = stt_model.transcribe(temp_path, language="ko")
+        result = model.transcribe(temp_path, language="ko")
         return jsonify({"success": True, "text": result.get("text", "").strip()})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -618,7 +618,7 @@ def sam_encode():
     predictor = get_sam_predictor()
     if predictor is None:
         return jsonify({"success": False,
-                        "error": "SAM 2 모델이 설치되지 않았거나 로드에 실패했습니다. 수동 작업을 진행해 주세요."}), 500
+                        "error": "MobileSAM 로드 실패. 서버 콘솔의 [MobileSAM] 로그를 확인해 주세요. 수동 브러시는 계속 사용 가능합니다."}), 500
 
     data = request.json or {}
     path = media_path(data)
@@ -848,40 +848,6 @@ def save_classes():
     try:
         dump_json(path, data.get('classes', {}))
         return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-@app.route('/api/export_reports_excel', methods=['POST'])
-def export_reports_excel_v2():
-    """operator별 컬럼을 나눠서 Excel로 내보낸다."""
-    data = request.json or {}
-    # reports 구조: { "op1_name": {"frame": "text", ...}, ... }  또는 레거시 flat {"frame": "text"}
-    reports = data.get('reports', {})
-    fps = float(data.get('fps', 30.0)) or 30.0
-    excel_path = annotation_path(data, "_diagnostic_report.xlsx", "image_diagnostic_report.xlsx")
-    try:
-        # 레거시(flat) 포맷 감지
-        first_val = next(iter(reports.values()), None) if reports else None
-        if isinstance(first_val, str):
-            operators = {"Operator": reports}
-        else:
-            operators = reports  # { op_name: {frame: text} }
-
-        all_frames = sorted({int(f) for op_data in operators.values() for f in op_data}, key=int)
-        rows = []
-        for frame_idx in all_frames:
-            seconds = frame_idx / fps
-            row = {
-                "Frame Index": frame_idx,
-                "Timestamp": f"{int(seconds // 60):02d}:{seconds % 60:05.2f}",
-            }
-            for op_name, op_data in operators.items():
-                row[op_name] = op_data.get(str(frame_idx), "")
-            rows.append(row)
-
-        pd.DataFrame(rows).to_excel(excel_path, index=False, engine='openpyxl')
-        return jsonify({"success": True, "path": excel_path})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 

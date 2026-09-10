@@ -31,16 +31,42 @@ REM Skip the whole install pass when the app can already import what it needs
 "%VPY%" -c "import flask, cv2, pandas" >nul 2>&1
 if not errorlevel 1 goto RUN
 
-echo [INFO] Installing dependencies (first run only, needs internet)...
-"%VPY%" -m pip install --upgrade pip -q
-"%VPY%" -m pip install -r requirements.txt -q
-if errorlevel 1 goto PIPFAIL
+echo.
+echo ===========================================================
+echo  FIRST RUN SETUP - this happens once and takes a while.
+echo  Total download is roughly 1-3 GB depending on your GPU.
+echo  Progress bars below are live. Do not close this window.
+echo ===========================================================
+echo.
 
-echo [INFO] Installing PyTorch (large download, first run only)...
-"%VPY%" -m pip install torch -q
-"%VPY%" -m pip install git+https://github.com/ChaoningZhang/MobileSAM.git -q
-"%VPY%" -m pip install openai-whisper -q
-echo [OK] dependencies installed
+REM -q is deliberately NOT used below. pip prints its own download progress
+REM bars and without them the console looks frozen for several minutes while
+REM torch downloads, which is exactly what users report as "it hangs".
+
+echo [1/5] Upgrading pip ... (a few seconds)
+"%VPY%" -m pip install --upgrade pip
+echo.
+
+echo [2/5] Core libraries: Flask, OpenCV, pandas ... (~1 min, ~100 MB)
+"%VPY%" -m pip install -r requirements.txt
+if errorlevel 1 goto PIPFAIL
+echo.
+
+echo [3/3] PyTorch ... (THE SLOW ONE: 5-15 min, 200 MB - 2.5 GB)
+echo       If the bar stalls at 0%%%% for a bit, it is resolving the index. Be patient.
+"%VPY%" -m pip install torch
+if errorlevel 1 goto PIPFAIL
+echo.
+
+REM MobileSAM needs NO install: its source is vendored in vendor\mobile_sam and
+REM the weight ships as mobile_sam.pt. Whisper is not installed either - the app
+REM fetches it on demand the first time the microphone button is pressed.
+
+echo ===========================================================
+echo  Setup complete. Future runs skip all of this and start
+echo  in a couple of seconds.
+echo ===========================================================
+echo.
 
 :RUN
 echo.
