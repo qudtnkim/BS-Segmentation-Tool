@@ -1,15 +1,18 @@
-# Windows batch files MUST be CRLF. LF-only .bat can silently break parsing
-# on Korean cp949 (and other CJK) consoles: `setlocal` gets read as `tlocal`,
-# delayed expansion never activates, and every `!var!` blows up as an unknown command.
-*.bat text eol=crlf
+# CRITICAL: -text means "store the bytes exactly as committed, never convert".
+#
+# Do NOT use `text eol=crlf` here. That stores LF in the repo and only converts
+# on checkout - which means a GitHub "Download ZIP" hands the user an LF-only
+# .bat file. cmd.exe on a CJK (cp949) console then mis-parses it: `setlocal`
+# reads as `tlocal`, delayed expansion never turns on, and every `!errorlevel!`
+# blows up as an unknown command. With -text the CRLF bytes are what's stored,
+# so clone AND zip download both get a working file.
+*.bat -text
+*.cmd -text
+*.ps1 -text
 
-# PowerShell / cmd auxiliary scripts also want CRLF on Windows targets.
-*.ps1 text eol=crlf
-*.cmd text eol=crlf
-
-# POSIX shell scripts MUST be LF or bash on Linux/macOS trips on trailing CR.
+# POSIX shell scripts must stay LF or bash trips on the trailing CR.
 *.sh text eol=lf
 
-# Model weights are binary — never touch line endings on them.
+# Binary - line-ending machinery must never touch these.
 *.pt binary
 mobile_sam.pt binary
