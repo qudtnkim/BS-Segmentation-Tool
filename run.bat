@@ -31,11 +31,12 @@ if not defined PY (
     if !errorlevel! equ 0 set "PY=py -3"
 )
 if not defined PY (
+    echo.
     echo [ERROR] Python not found in PATH.
     echo   Install Python 3.10-3.12 from https://www.python.org/
     echo   Check "Add python.exe to PATH" during install, then re-run this script.
-    pause
-    exit /b 1
+    echo.
+    goto FAILSTOP
 )
 for /f "tokens=2 delims= " %%v in ('%PY% --version 2^>^&1') do set "PYVER=%%v"
 echo [OK] Python %PYVER% found (%PY%).
@@ -53,8 +54,7 @@ if not exist "%VENV_DIR%\Scripts\python.exe" (
     %PY% -m venv "%VENV_DIR%"
     if !errorlevel! neq 0 (
         echo [ERROR] Virtual environment creation failed.
-        pause
-        exit /b 1
+        goto FAILSTOP
     )
 )
 set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
@@ -62,25 +62,42 @@ echo [OK] Venv ready at %VENV_DIR%.
 
 REM ---- 3. FAST PATH: if all deps + ffmpeg are already present, skip admin elevation
 REM     and jump straight to launch. This is the "python is installed, skip and go" path.
+REM     Note: goto must live OUTSIDE the parenthesised block. A goto inside ( ) makes
+REM     cmd lose the block context and can abort the script silently.
 "%VENV_PY%" -c "import flask, cv2, torch, mobile_sam" >nul 2>nul
 set "PKGS_OK=!errorlevel!"
 where ffmpeg >nul 2>nul
 set "FFMPEG_OK=!errorlevel!"
-if !PKGS_OK! equ 0 if !FFMPEG_OK! equ 0 (
-    echo [FASTPATH] All dependencies + ffmpeg present. Launching directly, no admin needed.
-    goto LAUNCH
-)
+set "FASTPATH=0"
+if !PKGS_OK! equ 0 if !FFMPEG_OK! equ 0 set "FASTPATH=1"
+
+echo [CHECK] python packages: !PKGS_OK!  (0 = all present)
+echo [CHECK] ffmpeg on PATH : !FFMPEG_OK!  (0 = found)
+
+if "!FASTPATH!"=="1" echo [FASTPATH] Everything present. Launching directly, no admin needed.
+if "!FASTPATH!"=="1" goto LAUNCH
 
 REM ---- 4. Something needs installing. Elevate ONLY if we need to write system PATH (ffmpeg).
 REM     If pkgs are the only thing missing, plain-user pip install into the venv works fine.
+set "IS_ADMIN=1"
 net session >nul 2>&1
-if !errorlevel! neq 0 (
-    if !FFMPEG_OK! neq 0 (
-        echo [INFO] ffmpeg missing - system-wide install needs Administrator rights.
-        echo        Requesting UAC elevation...
-        powershell -NoProfile -Command "try { Start-Process -FilePath '%~f0' -WorkingDirectory '%~dp0' -Verb RunAs } catch { exit 1 }"
-        exit /b
+if !errorlevel! neq 0 set "IS_ADMIN=0"
+
+if "!IS_ADMIN!"=="0" if !FFMPEG_OK! neq 0 (
+    echo.
+    echo [INFO] ffmpeg is missing and installing it system-wide needs Administrator rights.
+    echo        A UAC prompt will appear. Approve it and setup continues in the new window.
+    echo        This window will close in 3 seconds.
+    powershell -NoProfile -Command "try { Start-Process -FilePath '%~f0' -WorkingDirectory '%~dp0' -Verb RunAs } catch { exit 1 }"
+    if !errorlevel! neq 0 (
+        echo.
+        echo [ERROR] UAC elevation was denied or failed.
+        echo   Right-click run.bat and choose "Run as administrator", or install
+        echo   ffmpeg yourself and re-run this script.
+        goto FAILSTOP
     )
+    timeout /t 3 >nul
+    exit /b 0
 )
 
 echo ===========================================================
@@ -104,8 +121,7 @@ if !CORE_ERR! neq 0 (
     echo.
     echo [ERROR] Core dependency install failed.
     echo   Common causes: Python 3.13+ has no prebuilt wheel; or no internet.
-    pause
-    exit /b 1
+    goto FAILSTOP
 )
 echo [OK] Core dependencies installed.
 echo.
@@ -193,11 +209,32 @@ echo [OK] MobileSAM already available. Weight bundled in the repo.
 echo.
 
 :LAUNCH
+if not exist "%VENV_PY%" (
+    echo [ERROR] venv python missing at %VENV_PY%
+    echo   Delete %VENV_DIR% and re-run this script to rebuild it.
+    goto FAILSTOP
+)
 echo ===========================================================
 echo  All checks done. Starting server...
+echo  Browser opens at http://localhost:5000
+echo  Keep THIS window open - closing it stops the server.
+echo  Press Ctrl+C here to stop.
 echo ===========================================================
 echo.
-start http://localhost:5000
+start "" http://localhost:5000
 "%VENV_PY%" "%~dp0app.py"
+set "SRV_EXIT=!errorlevel!"
+echo.
+if !SRV_EXIT! neq 0 (
+    echo [ERROR] Server exited with code !SRV_EXIT!.
+    echo   Scroll up for the Python traceback.
+) else (
+    echo [INFO] Server stopped normally.
+)
+goto FAILSTOP
 
+REM Single exit point so the console NEVER closes silently on the user.
+:FAILSTOP
+echo.
 pause
+exit /b
