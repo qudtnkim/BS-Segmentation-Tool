@@ -208,44 +208,37 @@ if !errorlevel! neq 0 (
 )
 echo.
 
-REM ---- 6a. MobileSAM (primary, ~40MB, ~5-10x faster than SAM2 Hiera Tiny on CPU)
+REM ---- 6. MobileSAM (only AI backend; ~40MB weight ships in-repo)
+REM Full-import probe — mobile_sam pulls timm at import, so a shallow install check misses that.
 "%VENV_PY%" -c "from mobile_sam import sam_model_registry" >nul 2>nul
-set "MSAM_PRESENT=!errorlevel!"
-if !MSAM_PRESENT! equ 0 goto MSAM_OK
+if !errorlevel! equ 0 goto MSAM_OK
 
-echo [INSTALL] MobileSAM not found - installing from GitHub...
-"%VENV_PY%" -m pip install git+https://github.com/ChaoningZhang/MobileSAM.git -q
-set "MSAM_ERR=!errorlevel!"
-if !MSAM_ERR! neq 0 (
-    echo [WARN] MobileSAM install failed. Falling back to SAM 2.
-    goto SAM2_STEP
+echo [INSTALL] MobileSAM not found - installing (needs internet, offline-safe once cached)...
+"%VENV_PY%" -m pip install timm -q
+if !errorlevel! neq 0 (
+    echo [WARN] timm install failed - MobileSAM will not run. Retry manually:
+    echo   "%VENV_PY%" -m pip install timm
+    goto MSAM_DONE
 )
-echo [OK] MobileSAM installed.
-goto SAM2_STEP
+"%VENV_PY%" -m pip install git+https://github.com/ChaoningZhang/MobileSAM.git -q
+if !errorlevel! neq 0 (
+    echo [WARN] MobileSAM package install failed. Retry:
+    echo   "%VENV_PY%" -m pip install git+https://github.com/ChaoningZhang/MobileSAM.git
+    goto MSAM_DONE
+)
+REM Deeper verification — package present AND registry callable
+"%VENV_PY%" -c "from mobile_sam import sam_model_registry; sam_model_registry['vit_t']" >nul 2>nul
+if !errorlevel! neq 0 (
+    echo [WARN] MobileSAM installed but not usable. AI auto-propose will be disabled.
+    goto MSAM_DONE
+)
+echo [OK] MobileSAM installed and verified.
+goto MSAM_DONE
 
 :MSAM_OK
-echo [OK] MobileSAM already available.
+echo [OK] MobileSAM already available. Weight 'mobile_sam.pt' bundled in the repo.
 
-:SAM2_STEP
-REM ---- 6b. SAM 2 (fallback - only tried if user forces BS_USE_MOBILESAM=0 later)
-"%VENV_PY%" -c "from sam2.build_sam import build_sam2" >nul 2>nul
-set "SAM2_PRESENT=!errorlevel!"
-if !SAM2_PRESENT! equ 0 goto SAM2_OK
-
-echo [INSTALL] SAM 2 fallback not found - installing from PyPI...
-"%VENV_PY%" -m pip install sam2 -q
-set "SAM2_ERR=!errorlevel!"
-if !SAM2_ERR! neq 0 (
-    echo [INFO] SAM 2 install skipped. MobileSAM will be the only AI backend.
-    goto SAM2_DONE
-)
-echo [OK] SAM 2 fallback installed.
-goto SAM2_DONE
-
-:SAM2_OK
-echo [OK] SAM 2 fallback already available.
-
-:SAM2_DONE
+:MSAM_DONE
 echo.
 
 echo ===========================================================

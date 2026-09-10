@@ -10,6 +10,7 @@
 *_structures.json
 *_meta.json
 *_coaching.json
+*_sess_*.jsonl
 *.csv
 temp_voice.webm
 

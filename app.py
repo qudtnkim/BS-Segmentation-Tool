@@ -46,19 +46,21 @@ except Exception as e:
     stt_model = None
     print(f"[STT] Whisper not available ({e}). STT disabled.\n")
 
-CHECKPOINT_PATH = os.path.normpath(os.path.join(BASE_DIR, "sam2_hiera_tiny.pt"))
-CONFIG_NAME = "configs/sam2/sam2_hiera_t.yaml"
-WEIGHTS_URL = "https://dl.fbaipublicfiles.com/segment_anything_2/072824/sam2_hiera_tiny.pt"
-
-# MobileSAM — distilled ViT-Tiny SAM-1 backbone (~40MB weight, ~5-10× faster on CPU
-# than SAM 2 Hiera Tiny). Same predictor API as SAM 1, so refinement calls stay
-# unchanged. Set BS_USE_MOBILESAM=0 to force the SAM 2 path.
+# MobileSAM (only backend). ViT-Tiny distilled SAM 1 (~10M params, 39 MB weight).
+# The weight ships bundled in the repo so offline installs work; if it's missing
+# for any reason we fall back to a one-shot HuggingFace mirror download.
 MOBILE_SAM_PATH = os.path.normpath(os.path.join(BASE_DIR, "mobile_sam.pt"))
 MOBILE_SAM_URL  = "https://huggingface.co/dhkim2810/MobileSAM/resolve/main/mobile_sam.pt"
 
 _sam_predictor = None
-_predictor_backend = None   # "mobile_sam" or "sam2"
 _cached_key = None
+# Online color prior: {class_id: [np.ndarray shape (N, 3) BGR samples]}
+# Populated when the frontend calls /api/save_coco_annotations with a mask that
+# includes the source image bytes. Used by the hybrid CV refinement path to
+# bias GrabCut toward colors the user has already validated for that class.
+_class_priors = {}
+_CLASS_PRIOR_MAX_BATCHES = 20
+_CLASS_PRIOR_SAMPLES_PER_BATCH = 500
 
 
 def _download(url: str, dest: str):
@@ -67,66 +69,132 @@ def _download(url: str, dest: str):
     urllib.request.urlretrieve(url, dest)
 
 
-def _try_load_mobile_sam():
-    """MobileSAM 우선 로드. 실패시 None."""
+def get_sam_predictor():
+    """MobileSAM only. Returns None if the package or weight is unavailable."""
+    global _sam_predictor
+    if _sam_predictor is not None:
+        return _sam_predictor
     try:
-        # mobile_sam은 pip 이름과 import 이름이 동일 (github.com/ChaoningZhang/MobileSAM).
         from mobile_sam import sam_model_registry, SamPredictor
         if not os.path.exists(MOBILE_SAM_PATH):
+            print(f"[MobileSAM] Weight not found at {MOBILE_SAM_PATH}. Downloading...")
             _download(MOBILE_SAM_URL, MOBILE_SAM_PATH)
         model = sam_model_registry["vit_t"](checkpoint=MOBILE_SAM_PATH)
         model.to(device=device)
         model.eval()
-        pred = SamPredictor(model)
+        _sam_predictor = SamPredictor(model)
         print(f"[MobileSAM] Predictor ready on [{device}].")
-        return pred
-    except Exception as e:
-        print(f"[MobileSAM] Unavailable ({e}). Falling back to SAM 2.")
-        return None
-
-
-def _try_load_sam2():
-    """SAM 2 Hiera Tiny — legacy 백엔드."""
-    try:
-        from sam2.build_sam import build_sam2
-        from sam2.sam2_image_predictor import SAM2ImagePredictor
-        if not os.path.exists(CHECKPOINT_PATH):
-            _download(WEIGHTS_URL, CHECKPOINT_PATH)
-        model = build_sam2(CONFIG_NAME, CHECKPOINT_PATH, device=device)
-        pred = SAM2ImagePredictor(model)
-        print(f"[SAM2] Predictor ready on [{device}].")
-        return pred
-    except Exception as e:
-        print(f"[SAM2] Init failed: {e}")
-        return None
-
-
-def get_sam_predictor():
-    """MobileSAM 우선, 없으면 SAM2. 둘 다 실패하면 None."""
-    global _sam_predictor, _predictor_backend
-    if _sam_predictor is not None:
         return _sam_predictor
-    if os.environ.get("BS_USE_MOBILESAM", "1") == "1":
-        _sam_predictor = _try_load_mobile_sam()
-        if _sam_predictor is not None:
-            _predictor_backend = "mobile_sam"
-            return _sam_predictor
-    _sam_predictor = _try_load_sam2()
-    if _sam_predictor is not None:
-        _predictor_backend = "sam2"
-    return _sam_predictor
+    except ImportError as e:
+        print(f"[MobileSAM] Import failed ({e}). Run: pip install timm && pip install git+https://github.com/ChaoningZhang/MobileSAM.git")
+        return None
+    except Exception as e:
+        print(f"[MobileSAM] Init failed ({e}). AI auto-propose disabled.")
+        return None
 
 
 @app.route('/api/sam_backend', methods=['GET'])
 def sam_backend_info():
-    """UI가 현재 어떤 SAM 백엔드가 살아 있는지 표시할 수 있도록."""
-    # Force initialization if not yet
+    """Report which backend is live so the UI can badge it."""
     get_sam_predictor()
     return jsonify({
-        "backend": _predictor_backend,
+        "backend": "mobile_sam" if _sam_predictor is not None else None,
         "device": device,
         "available": _sam_predictor is not None,
     })
+
+
+# ---- Hybrid CV refinement -------------------------------------------------
+
+def _grabcut_refine(image_bgr, sam_mask):
+    """Snap SAM's boundary to real edges using OpenCV GrabCut.
+
+    sam_mask is a uint8 {0,1} array. We build a GrabCut trimap from it:
+      - core (deeply eroded FG) → cv2.GC_FGD  (definitely foreground)
+      - SAM says yes           → cv2.GC_PR_FGD (probable foreground)
+      - SAM says no            → cv2.GC_PR_BGD (probable background)
+    2 iterations is plenty and keeps the whole call under ~100 ms on a 720p frame.
+    """
+    if sam_mask.sum() == 0:
+        return sam_mask.astype(np.uint8)
+    h, w = sam_mask.shape
+    gc_mask = np.full((h, w), cv2.GC_PR_BGD, dtype=np.uint8)
+    gc_mask[sam_mask > 0] = cv2.GC_PR_FGD
+    kernel = np.ones((5, 5), np.uint8)
+    core_fg = cv2.erode(sam_mask.astype(np.uint8), kernel, iterations=3)
+    gc_mask[core_fg > 0] = cv2.GC_FGD
+    bgd_model = np.zeros((1, 65), dtype=np.float64)
+    fgd_model = np.zeros((1, 65), dtype=np.float64)
+    try:
+        cv2.grabCut(image_bgr, gc_mask, None, bgd_model, fgd_model, 2, cv2.GC_INIT_WITH_MASK)
+        refined = np.where((gc_mask == cv2.GC_FGD) | (gc_mask == cv2.GC_PR_FGD), 1, 0).astype(np.uint8)
+        # Sanity: if GrabCut collapsed everything, keep the SAM mask.
+        if refined.sum() < sam_mask.sum() * 0.1:
+            return sam_mask.astype(np.uint8)
+        return refined
+    except Exception as e:
+        print(f"[GrabCut] refinement failed ({e}), returning raw SAM mask")
+        return sam_mask.astype(np.uint8)
+
+
+def _update_class_prior(cid, image_bgr, mask):
+    """Record a random sample of BGR pixel values under the user-confirmed mask.
+    Called on save so the color prior grows with every annotated frame."""
+    if mask is None or image_bgr is None:
+        return
+    ys, xs = np.where(mask > 0)
+    if len(xs) < 20:
+        return
+    n = min(_CLASS_PRIOR_SAMPLES_PER_BATCH, len(xs))
+    idx = np.random.choice(len(xs), n, replace=False)
+    samples = image_bgr[ys[idx], xs[idx]].astype(np.float32)  # shape (n, 3)
+    bucket = _class_priors.setdefault(cid, [])
+    bucket.append(samples)
+    if len(bucket) > _CLASS_PRIOR_MAX_BATCHES:
+        del bucket[: len(bucket) - _CLASS_PRIOR_MAX_BATCHES]
+
+
+def _colorprior_boost(image_bgr, cid, sam_mask):
+    """Grow the SAM mask outward where pixels match the class's learned color prior.
+    Returns a mask same shape as sam_mask. Constrained to a small dilation band
+    around the SAM mask so we don't inflate wildly."""
+    bucket = _class_priors.get(cid) or []
+    if not bucket:
+        return sam_mask.astype(np.uint8)
+    prior = np.concatenate(bucket, axis=0)  # (K, 3) BGR floats
+    # Cheap similarity: for each candidate pixel, distance to the nearest prior sample.
+    # Restrict candidates to a dilation ring around SAM's mask so the operation is fast.
+    dilated = cv2.dilate(sam_mask.astype(np.uint8), np.ones((15, 15), np.uint8), iterations=2)
+    band = (dilated > 0) & (sam_mask == 0)
+    ys, xs = np.where(band)
+    if len(xs) == 0:
+        return sam_mask.astype(np.uint8)
+    candidates = image_bgr[ys, xs].astype(np.float32)  # (M, 3)
+    # Subsample prior to keep the pairwise distance manageable
+    if prior.shape[0] > 2000:
+        prior = prior[np.random.choice(prior.shape[0], 2000, replace=False)]
+    # Distance = min over prior samples per candidate
+    # (M, 1, 3) - (1, K, 3) → (M, K, 3) → norm → (M, K) → min → (M,)
+    # Chunk to avoid OOM on huge candidate lists
+    accept = np.zeros(len(xs), dtype=bool)
+    chunk = 4096
+    thr2 = 30.0 ** 2  # squared L2 distance in BGR space (~30 units)
+    for i in range(0, len(xs), chunk):
+        c = candidates[i:i+chunk][:, None, :]  # (m,1,3)
+        diff = c - prior[None, :, :]           # (m,K,3)
+        d2 = (diff * diff).sum(axis=-1).min(axis=1)  # (m,)
+        accept[i:i+chunk] = d2 < thr2
+    out = sam_mask.astype(np.uint8).copy()
+    out[ys[accept], xs[accept]] = 1
+    return out
+
+
+def hybrid_refine(image_bgr, sam_mask, cid=None):
+    """Full hybrid pipeline: SAM → GrabCut → optional color-prior boost."""
+    refined = _grabcut_refine(image_bgr, sam_mask)
+    if cid is not None:
+        refined = _colorprior_boost(image_bgr, cid, refined)
+    return refined
 
 
 # ---- 공통 유틸 -------------------------------------------------------------
@@ -580,7 +648,7 @@ def sam_refine():
     predictor = get_sam_predictor()
     if predictor is None:
         return jsonify({"success": False,
-                        "error": "SAM 2 모델 구동 실패. 수동 브러시를 이용해 주세요."}), 500
+                        "error": "MobileSAM unavailable. Use the manual brush."}), 500
 
     data = request.json or {}
     path = media_path(data)
@@ -588,12 +656,14 @@ def sam_refine():
     class_id = int(data.get('class_id', 1))
     width, height = int(data.get('width', 800)), int(data.get('height', 600))
 
+    # We keep a reference to the raw BGR frame around because the hybrid refinement
+    # step below needs pixel colors, not just the SAM embedding cache.
     key = f"{path}_{frame_index}"
+    frame_bgr = read_video_frame(path, frame_index) if path.lower().endswith(VIDEO_EXTENSIONS) else cv2.imread(path)
+    if frame_bgr is None:
+        return jsonify({"success": False, "error": "Frame read failed"}), 400
     if _cached_key != key:
-        frame = read_video_frame(path, frame_index)
-        if frame is None:
-            return jsonify({"success": False, "error": "Frame read failed"}), 400
-        predictor.set_image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        predictor.set_image(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
         _cached_key = key
 
     try:
@@ -617,14 +687,29 @@ def sam_refine():
             labels = np.ones(len(points), dtype=np.int32)
             masks, _, _ = predictor.predict(point_coords=points, point_labels=labels,
                                             box=box, multimask_output=False)
+            # Learn from the user's own seed mask — this is the ground truth the user
+            # trusts; sampling from SAM's output would create a feedback loop.
+            _update_class_prior(class_id, frame_bgr, mask)
 
-        mask_binary = masks[0].astype(np.uint8)
+        raw_mask = masks[0].astype(np.uint8)
+        # Hybrid CV refinement — GrabCut boundary snap + color prior for this class.
+        # Toggleable via 'hybrid' flag from the client; default on because MobileSAM
+        # alone has softer boundaries than SAM 2 (that's the trade for its speed).
+        do_hybrid = data.get('hybrid', True)
+        mask_binary = hybrid_refine(frame_bgr, raw_mask, cid=class_id) if do_hybrid else raw_mask
+
         ys, xs = np.where(mask_binary > 0)
         refined_box = None
         if len(xs) > 0:
             refined_box = [int(xs.min()), int(ys.min()),
                            int(xs.max() - xs.min()), int(ys.max() - ys.min())]
-        return jsonify({"success": True, "rle": rle_encode(mask_binary), "refined_box": refined_box})
+        return jsonify({
+            "success": True,
+            "rle": rle_encode(mask_binary),
+            "refined_box": refined_box,
+            "hybrid": bool(do_hybrid),
+            "prior_batches": len(_class_priors.get(class_id, [])),
+        })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -695,6 +780,55 @@ def save_coaching():
     try:
         dump_json(annotation_path(data, "_coaching.json", "image_coaching.json"), data.get('coaching', {}))
         return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/log_events', methods=['POST'])
+def log_events():
+    """Append-only session log.
+
+    Body: {directory, video_name, session_id, events: [[t_ms, type, ...args], ...]}
+    Writes to <video>_sess_<session_id>.jsonl (one line per event; last line = session index
+    with meta on start). The frontend batches events every ~2s so the write rate is low
+    even for aggressive mouse-move sampling. Files are JSONL so any downstream analysis
+    (paper stats, replay tools, tail -f monitoring) can stream them cheaply.
+
+    Storage economy notes:
+      - t_ms is int ms since session_start (relative, saves ~9 bytes per event vs epoch ms)
+      - types are short string codes ("mm","md","kd",…) — see the frontend log() helper
+      - mouse-move sampled to <=10Hz by the client with a 5-px displacement gate
+    """
+    data = request.json or {}
+    directory = data.get('directory', '')
+    if not directory or not os.path.isdir(directory):
+        return jsonify({"success": False, "error": "Invalid directory"}), 400
+
+    sess = str(data.get('session_id', '')).strip()
+    if not sess or not re.fullmatch(r'[A-Za-z0-9_\-.]{1,64}', sess):
+        return jsonify({"success": False, "error": "Invalid session_id"}), 400
+
+    video_name = data.get('video_name', '')
+    if video_name:
+        base = os.path.splitext(video_name)[0]
+        log_path = os.path.join(directory, f"{base}_sess_{sess}.jsonl")
+    else:
+        log_path = os.path.join(directory, f"session_{sess}.jsonl")
+
+    events = data.get('events', [])
+    if not isinstance(events, list) or not events:
+        return jsonify({"success": True, "written": 0})
+
+    try:
+        # Append-only text write — the JSONL format tolerates a truncated write mid-line
+        # (a single bad line at EOF is fine; the earlier events are recoverable).
+        with open(log_path, 'a', encoding='utf-8') as f:
+            for ev in events:
+                # Cheap defensive cap so an eventual bug can't blow the log up
+                if isinstance(ev, list) and len(ev) <= 32:
+                    f.write(json.dumps(ev, ensure_ascii=False, separators=(',', ':')))
+                    f.write('\n')
+        return jsonify({"success": True, "written": len(events), "path": log_path})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 

@@ -65,28 +65,24 @@ else
     echo "[OK] Whisper already available."
 fi
 
-# ---- 6a. MobileSAM (primary, ~40MB, 5-10x faster than SAM2 Hiera Tiny on CPU)
+# ---- 6. MobileSAM (only AI backend, ~40MB weight ships with the repo)
 if ! "$VENV_PY" -c "from mobile_sam import sam_model_registry" >/dev/null 2>&1; then
-    echo "[INSTALL] MobileSAM not found - installing from GitHub..."
+    echo "[INSTALL] MobileSAM not found - installing (needs internet, offline-safe once cached)..."
+    if ! "$VENV_PY" -m pip install timm -q; then
+        echo "[WARN] timm install failed. Retry: \"$VENV_PY\" -m pip install timm"
+    fi
     if "$VENV_PY" -m pip install git+https://github.com/ChaoningZhang/MobileSAM.git -q; then
-        echo "[OK] MobileSAM installed."
+        if "$VENV_PY" -c "from mobile_sam import sam_model_registry; sam_model_registry['vit_t']" >/dev/null 2>&1; then
+            echo "[OK] MobileSAM installed and verified."
+        else
+            echo "[WARN] MobileSAM installed but registry not callable. AI auto-propose will be off."
+        fi
     else
-        echo "[WARN] MobileSAM install failed. Falling back to SAM 2 attempt."
+        echo "[WARN] MobileSAM install failed. Retry:"
+        echo "  \"$VENV_PY\" -m pip install git+https://github.com/ChaoningZhang/MobileSAM.git"
     fi
 else
-    echo "[OK] MobileSAM already available."
-fi
-
-# ---- 6b. SAM 2 (fallback backend - honored only when MobileSAM unavailable or BS_USE_MOBILESAM=0)
-if ! "$VENV_PY" -c "from sam2.build_sam import build_sam2" >/dev/null 2>&1; then
-    echo "[INSTALL] SAM 2 fallback not found - installing from PyPI..."
-    if "$VENV_PY" -m pip install sam2 -q; then
-        echo "[OK] SAM 2 fallback installed."
-    else
-        echo "[INFO] SAM 2 install skipped. MobileSAM will be the only AI backend."
-    fi
-else
-    echo "[OK] SAM 2 fallback already available."
+    echo "[OK] MobileSAM already available. Weight 'mobile_sam.pt' bundled in the repo."
 fi
 
 echo

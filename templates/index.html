@@ -213,11 +213,14 @@
                     <textarea class="report-textarea" id="frameReportTextarea" placeholder="Select an operator above, then type the description for this frame."></textarea>
                     <button class="stt-record-btn" id="sttRecordBtn">🎙️</button>
                 </div>
-                <div style="display:flex; align-items:center; gap:6px; margin-top:8px;">
-                    <span style="font-size:13px; font-weight:600; color:#fbbf24;">🎓 Surgical Coaching</span>
+            </div>
+
+            <div class="diagnostic-report-panel" style="max-width: none; width: 100%; border-color: rgba(251,191,36,0.35);">
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                    <span style="font-size:15px; font-weight:600; color:#fbbf24;">🎓 Surgical Coaching</span>
                     <span style="font-size:11px; color:var(--text-sub);">tip / comment for this frame — saved to &lt;video&gt;_coaching.json</span>
                 </div>
-                <textarea class="report-textarea" id="coachingTextarea" style="height:48px; margin-top:4px; border-color:#fbbf24;" placeholder="Coaching tip for this frame (e.g. keep the plane between fascia and vessel, avoid grasping the pancreas)."></textarea>
+                <textarea class="report-textarea" id="coachingTextarea" style="width: 100%; min-height:70px; margin-top:6px; border-color: rgba(251,191,36,0.6); resize: vertical;" placeholder="Coaching tip for this frame (e.g. keep the plane between fascia and vessel, avoid grasping the pancreas)."></textarea>
             </div>
 
             <div class="collapsible-details">
@@ -951,6 +954,7 @@
         async function selectFile(idx, type) {
             state.mediaType = type; state.currentIndex = idx;
             state.undoStack = []; state.redoStack = []; updateUndoRedoButtons();
+            log("file_open", type, type === "video" ? state.videos[idx] : state.images[idx]);
             renderFileList();
 
             await loadPhasesFromServer(type === "video" ? state.videos[idx] : "");
@@ -1257,6 +1261,7 @@
                         if (sameAsInherited) delete state.framePhases[curFrame];
                         else state.framePhases[curFrame] = newArr;
                         savePhasesToServer();
+                        log("phase", curFrame, e.target.checked ? "+" + subKey : "-" + subKey);
                         renderPhaseGrid();
                         updatePhaseBadge(curFrame);
                     };
@@ -1568,11 +1573,13 @@
                     if (sameAsInherited) delete state.frameStructures[curFrame];
                     else state.frameStructures[curFrame] = newArr;
                     saveStructuresToServer();
+                    log("struct", curFrame, e.target.checked ? "+" + subKey : "-" + subKey);
                     renderStructureList();
                     updateStructureBadge(curFrame);
                 };
                 row.querySelector(".struct-draw-btn").onclick = (e) => {
                     e.stopPropagation();
+                    log("struct_draw", subKey);
                     activateStructureForDrawing(subKey, def.name || def.full || "Structure", fullLabel);
                 };
                 list.appendChild(row);
@@ -1855,6 +1862,7 @@
         }
 
         function seekToFrame(frameIdx) {
+            log("frame", frameIdx);
             loadFrameReport(frameIdx);
             state.undoStack = []; state.redoStack = []; updateUndoRedoButtons();
             if (state.videoPlayMode === "frame_extraction") {
@@ -1967,7 +1975,7 @@
             if (!state.undoStack.length) { showToast("Nothing to undo", true); return; }
             state.redoStack.push(_snapshotCurrent());
             _restoreSnapshot(state.undoStack.pop());
-            scheduleRedraw(); showToast("Undo");
+            scheduleRedraw(); showToast("Undo"); log("undo");
             updateUndoRedoButtons();
         }
 
@@ -1975,7 +1983,7 @@
             if (!state.redoStack.length) { showToast("Nothing to redo", true); return; }
             state.undoStack.push(_snapshotCurrent());
             _restoreSnapshot(state.redoStack.pop());
-            scheduleRedraw(); showToast("Redo");
+            scheduleRedraw(); showToast("Redo"); log("redo");
             updateUndoRedoButtons();
         }
 
@@ -2125,6 +2133,8 @@
         maskCanvas.onmousedown = function(e) {
             if (!state.imageLoaded) return;
             const pos = getMousePos(e); lastMousePos = pos; saveHistory();
+            const tool = state.isEraser ? "eraser" : state.isBboxMode ? "bbox" : state.isContourMode ? "contour" : "brush";
+            log("stroke_start", tool, state.currentClass, pos.x, pos.y);
             if (state.isContourMode) { state.isDrawingContour=true; state.contourPoints=[pos]; }
             else if (state.isBboxMode)  { state.isDrawingBbox=true; state.bboxStart=pos; state.bboxCurrent=pos; }
             else { state.isDrawing=true; paintPixel(pos); scheduleRedraw(); }
@@ -2143,7 +2153,7 @@
         };
 
         window.onmouseup = function(e) {
-            if (state.isDrawing) { state.isDrawing=false; scheduleRedraw(); }
+            if (state.isDrawing) { state.isDrawing=false; scheduleRedraw(); log("stroke_end","brush",state.currentClass); }
             if (state.isDrawingBbox && state.isBboxMode) {
                 state.isDrawingBbox=false; const pos=getMousePos(e);
                 const cur=getCurrentFrameIndex();
@@ -2151,7 +2161,10 @@
                 if (!state.frameAnnotations[cur].bboxes[state.currentClass]) state.frameAnnotations[cur].bboxes[state.currentClass]=[];
                 const bx=Math.min(state.bboxStart.x,pos.x), by=Math.min(state.bboxStart.y,pos.y);
                 const bw=Math.abs(pos.x-state.bboxStart.x), bh=Math.abs(pos.y-state.bboxStart.y);
-                if (bw>3&&bh>3) state.frameAnnotations[cur].bboxes[state.currentClass].push([bx,by,bw,bh,1]);
+                if (bw>3&&bh>3) {
+                    state.frameAnnotations[cur].bboxes[state.currentClass].push([bx,by,bw,bh,1]);
+                    log("bbox", state.currentClass, bx, by, bw, bh);
+                }
                 state.bboxCurrent=null; scheduleRedraw();
             }
             if (state.isDrawingContour && state.isContourMode) {
@@ -2164,6 +2177,7 @@
                         const layer=getActiveMaskLayer(state.currentClass);
                         fillPolygon(layer, state.contourPoints, state.imageWidth, state.imageHeight, 1);
                     }
+                    log("stroke_end","contour", state.currentClass, state.contourPoints.length);
                 }
                 state.contourPoints=[]; scheduleRedraw();
             }
@@ -2209,10 +2223,10 @@
         }
 
         // ── 도구 버튼 ────────────────────────────────────────────────────
-        $("drawBtn").onclick    = function() { state.isEraser=false; state.isBboxMode=false; state.isContourMode=false; setActiveToolBtn(this); };
-        $("eraseBtn").onclick   = function() { state.isEraser=true;  state.isBboxMode=false; state.isContourMode=false; setActiveToolBtn(this); };
-        $("contourBtn").onclick = function() { state.isEraser=false; state.isBboxMode=false; state.isContourMode=true;  setActiveToolBtn(this); };
-        $("bboxBtn").onclick    = function() { state.isEraser=false; state.isBboxMode=true;  state.isContourMode=false; setActiveToolBtn(this); };
+        $("drawBtn").onclick    = function() { state.isEraser=false; state.isBboxMode=false; state.isContourMode=false; setActiveToolBtn(this); log("tool","brush"); };
+        $("eraseBtn").onclick   = function() { state.isEraser=true;  state.isBboxMode=false; state.isContourMode=false; setActiveToolBtn(this); log("tool","eraser"); };
+        $("contourBtn").onclick = function() { state.isEraser=false; state.isBboxMode=false; state.isContourMode=true;  setActiveToolBtn(this); log("tool","contour"); };
+        $("bboxBtn").onclick    = function() { state.isEraser=false; state.isBboxMode=true;  state.isContourMode=false; setActiveToolBtn(this); log("tool","bbox"); };
         function setActiveToolBtn(el) { document.querySelectorAll(".btn-tool").forEach(b=>b.classList.remove("active")); el.classList.add("active"); }
 
         function _syncBrushPreset() {
@@ -2284,6 +2298,7 @@
         }
 
         $("saveBtn").onclick = async function() {
+            log("save","manual");
             saveCurrentFrameReport(activeReportFrame);
             const btn=this; btn.innerText="저장 중... (Saving...)";
             try {
@@ -2383,6 +2398,9 @@
         $("undoBtn").onclick = performUndo;
         $("redoBtn").onclick = performRedo;
         updateUndoRedoButtons();
+        // AI Auto-Propose flag on/off gets its own row so the paper can quantify how
+        // often the surgeon leans on the AI vs pure manual brushwork.
+        $("aiAutoPropose").addEventListener("change", (e) => log("flag","ai_auto_propose", e.target.checked ? 1 : 0));
 
         // ── Surgery Type modal handlers ─────────────────────────────────
         $("openSurgeryTypeBtn").onclick = () => {
@@ -2418,6 +2436,95 @@
             showToast(`Added surgery type: ${name}`);
         };
 
+        // ── Session logging ──────────────────────────────────────────────
+        // Comprehensive but storage-economical event log — designed to reproduce a session
+        // for downstream analysis / papers. Every user input is captured, but:
+        //   • timestamps are relative ms since session_start (int, ~5 bytes vs 13 for epoch)
+        //   • event types are 2-3 char codes to keep JSONL rows tiny
+        //   • mouse-move is throttled to <=10 Hz + 5-px displacement gate
+        //   • events are buffered in-memory and flushed every 2s to /api/log_events
+        // File: <video>_sess_<session_id>.jsonl in the annotation directory.
+        state.session = {
+            id: (new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + "_" +
+                 Math.random().toString(36).slice(2, 8)),
+            start: performance.now(),
+            buffer: [],
+            lastMM: 0,
+            lastMMxy: [0, 0],
+            enabled: true,
+        };
+        function _now() { return Math.round(performance.now() - state.session.start); }
+        function log(type, ...args) {
+            if (!state.session.enabled) return;
+            state.session.buffer.push([_now(), type, ...args]);
+            if (state.session.buffer.length > 200) flushLog();
+        }
+        async function flushLog() {
+            if (!state.session.buffer.length || !state.directory) return;
+            const events = state.session.buffer.splice(0);
+            try {
+                await postJSON("/api/log_events", {
+                    directory: state.directory,
+                    video_name: state.mediaType === "video" ? (state.videos[state.currentIndex] || "") : (state.images[state.currentIndex] || ""),
+                    session_id: state.session.id,
+                    events,
+                });
+            } catch(e) {
+                // Requeue on failure so we don't lose events on transient network hiccups
+                state.session.buffer = events.concat(state.session.buffer);
+            }
+        }
+        setInterval(flushLog, 2000);
+        window.addEventListener("beforeunload", () => {
+            // Best-effort flush via sendBeacon (works even during tab close)
+            if (!state.session.buffer.length || !state.directory) return;
+            try {
+                const body = JSON.stringify({
+                    directory: state.directory,
+                    video_name: state.mediaType === "video" ? (state.videos[state.currentIndex] || "") : (state.images[state.currentIndex] || ""),
+                    session_id: state.session.id,
+                    events: state.session.buffer.concat([[_now(), "session_end"]]),
+                });
+                navigator.sendBeacon("/api/log_events", new Blob([body], { type: "application/json" }));
+            } catch(e) { /* nothing we can do at unload time */ }
+        });
+        // Session-start row carries the meta the paper analysis needs
+        log("session_start", { ua: navigator.userAgent, screen: [screen.width, screen.height] });
+
+        // Global input hooks
+        document.addEventListener("mousemove", (e) => {
+            // <=10Hz + 5-px gate; use client coords, not canvas coords
+            const now = _now();
+            if (now - state.session.lastMM < 100) return;
+            const dx = e.clientX - state.session.lastMMxy[0];
+            const dy = e.clientY - state.session.lastMMxy[1];
+            if (dx*dx + dy*dy < 25) return;
+            state.session.lastMM = now;
+            state.session.lastMMxy = [e.clientX, e.clientY];
+            log("mm", e.clientX | 0, e.clientY | 0);
+        }, true);
+        document.addEventListener("mousedown", (e) => log("md", e.clientX | 0, e.clientY | 0, e.button), true);
+        document.addEventListener("mouseup",   (e) => log("mu", e.clientX | 0, e.clientY | 0, e.button), true);
+        document.addEventListener("wheel", (e) => {
+            // sample only meaningful wheel events (zoom, scroll)
+            if (Math.abs(e.deltaY) < 5) return;
+            log("wh", Math.sign(e.deltaY), e.ctrlKey ? 1 : 0);
+        }, { passive: true, capture: true });
+        document.addEventListener("keydown", (e) => {
+            // Store only key + modifier mask; skip modifier-only presses to keep noise low
+            if (["Shift","Control","Alt","Meta"].includes(e.key)) return;
+            const mods = (e.ctrlKey?1:0) | (e.shiftKey?2:0) | (e.altKey?4:0) | (e.metaKey?8:0);
+            log("kd", e.key, mods);
+        }, true);
+        document.addEventListener("click", (e) => {
+            // Log a clean action row when a labeled interactive control is clicked so
+            // "flow of used functions" is easy to grep in the JSONL later.
+            const t = e.target;
+            if (!t) return;
+            if (t.id) log("clk", "#" + t.id);
+            else if (t.tagName === "BUTTON" && t.innerText) log("clk", "btn:" + t.innerText.trim().slice(0, 40));
+        }, true);
+
         // ── SAM backend badge ────────────────────────────────────────────
         // Show which model is actually loaded so users know whether they're on the fast path.
         (async function initBackendBadge() {
@@ -2427,11 +2534,10 @@
                 const r = await fetch("/api/sam_backend");
                 const j = await r.json();
                 if (!j.available) {
-                    badge.innerText = "(no SAM installed)";
+                    badge.innerText = "(MobileSAM unavailable — install via run.bat)";
                     badge.style.color = "var(--danger-color)";
                 } else {
-                    const backend = j.backend === "mobile_sam" ? "MobileSAM" : "SAM 2";
-                    badge.innerText = `(${backend} · ${j.device})`;
+                    badge.innerText = `(MobileSAM+CV · ${j.device})`;
                     badge.style.color = j.device === "cuda" ? "#10b981" : "var(--text-sub)";
                 }
             } catch(e) { badge.innerText = ""; }
