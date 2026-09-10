@@ -564,6 +564,42 @@ def save_structures():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@app.route('/api/load_meta', methods=['POST'])
+def load_meta():
+    """비디오별 대카테고리(수술 종류) 등 metadata."""
+    data = request.json or {}
+    meta = load_json(annotation_path(data, "_meta.json", "image_meta.json"), default={})
+    return jsonify({"success": True, "meta": meta})
+
+
+@app.route('/api/save_meta', methods=['POST'])
+def save_meta():
+    data = request.json or {}
+    try:
+        dump_json(annotation_path(data, "_meta.json", "image_meta.json"), data.get('meta', {}))
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/load_coaching', methods=['POST'])
+def load_coaching():
+    """Surgical coaching (수술 tip) — 프레임별 자유 텍스트."""
+    data = request.json or {}
+    payload = load_json(annotation_path(data, "_coaching.json", "image_coaching.json"), default={})
+    return jsonify({"success": True, "coaching": payload})
+
+
+@app.route('/api/save_coaching', methods=['POST'])
+def save_coaching():
+    data = request.json or {}
+    try:
+        dump_json(annotation_path(data, "_coaching.json", "image_coaching.json"), data.get('coaching', {}))
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route('/api/load_classes', methods=['POST'])
 def load_classes():
     data = request.json or {}

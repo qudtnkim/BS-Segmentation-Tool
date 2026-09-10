@@ -13,9 +13,9 @@
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-size: 14px; }
-        header { background: #161925; border-bottom: 1px solid var(--border-color); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; height: 70px; }
-        .logo-section h1 { font-size: 22px; font-weight: 600; color: #6366f1; }
-        .dir-input-container { display: flex; gap: 8px; width: 60%; }
+        header { background: #161925; border-bottom: 1px solid var(--border-color); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; height: 70px; gap: 12px; flex-wrap: nowrap; }
+        .logo-section h1 { font-size: 20px; font-weight: 600; color: #6366f1; white-space: nowrap; }
+        .dir-input-container { display: flex; gap: 6px; flex: 1; min-width: 0; }
         .dir-input { flex-grow: 1; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; color: #fff; outline: none; font-size: 14px; }
         .btn { background: var(--accent-color); color: white; border: none; border-radius: 8px; padding: 10px 15px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; font-size: 14px; font-weight: 500;}
         .btn:hover { background: var(--accent-hover); }
@@ -63,6 +63,11 @@
         .class-item { display: flex; align-items: center; padding: 9px; border-radius: 6px; background: var(--input-bg); border: 1px solid var(--border-color); cursor: pointer; font-size: 14px; }
         .class-item.active { border-color: var(--accent-color); background: rgba(99, 102, 241, 0.1); }
         .color-indicator { width: 16px; height: 16px; border-radius: 4px; margin-right: 10px; }
+        /* Inline color picker in the class list — reset the native <input type=color> chrome so it looks like the old swatch */
+        input.color-indicator { border: 1px solid var(--border-color); padding: 0; cursor: pointer; background: transparent; }
+        input.color-indicator::-webkit-color-swatch-wrapper { padding: 0; }
+        input.color-indicator::-webkit-color-swatch { border: none; border-radius: 3px; }
+        input.color-indicator::-moz-color-swatch { border: none; border-radius: 3px; }
         .tool-options { display: flex; flex-direction: column; gap: 15px; }
         .tool-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; }
         .btn-tool { background: var(--input-bg); border: 1px solid var(--border-color); padding: 9px 6px; border-radius: 6px; color: #fff; cursor: pointer; text-align: center; font-size: 14px; transition: 0.2s; }
@@ -115,13 +120,21 @@
         .phase-chips { display: flex; flex-wrap: wrap; gap: 6px; }
         .phase-chip { background: rgba(99,102,241,0.2); border: 1px solid var(--accent-color); border-radius: 12px; padding: 4px 12px; font-size: 13px; color: #a5b4fc; }
         .phase-chip.inherited { background: rgba(148,163,184,0.15); border-color: var(--border-color); color: var(--text-sub); }
-        .phase-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.55); color: #a5b4fc; padding: 5px 12px; border-radius: 4px; font-size: 13px; pointer-events: none; user-select: none; z-index: 5; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .phase-badge.empty { color: var(--text-sub); font-style: italic; }
+        .phase-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.55); color: #a5b4fc; padding: 5px 12px; border-radius: 4px; font-size: 13px; user-select: none; z-index: 5; max-width: 70%; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; pointer-events: auto; }
+        .phase-badge.empty { color: var(--text-sub); font-style: italic; pointer-events: none; }
+        .badge-chip { display: inline-flex; align-items: center; gap: 4px; background: rgba(99,102,241,0.35); border-radius: 10px; padding: 1px 6px 1px 8px; font-size: 12px; }
+        .badge-chip .x { cursor: pointer; opacity: 0.6; padding: 0 2px; }
+        .badge-chip .x:hover { opacity: 1; color: var(--danger-hover); }
 
         .sheet-tabs { display: flex; gap: 4px; margin-bottom: 6px; border-bottom: 1px solid var(--border-color); }
         .sheet-tab { flex: 1; background: transparent; border: none; color: var(--text-sub); padding: 8px 6px; cursor: pointer; font-size: 13px; border-bottom: 2px solid transparent; }
         .sheet-tab.active { color: var(--accent-hover); border-bottom-color: var(--accent-color); font-weight: 600; }
         .sheet-tab:hover:not(.active) { color: var(--text-main); }
+
+        .preset-row { flex-wrap: wrap; margin-top: -6px; }
+        .preset-btn { flex: 1; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-sub); padding: 4px 0; border-radius: 4px; font-size: 12px; cursor: pointer; min-width: 40px; }
+        .preset-btn:hover { color: var(--text-main); border-color: var(--accent-hover); }
+        .preset-btn.active { background: rgba(99,102,241,0.2); border-color: var(--accent-color); color: var(--accent-hover); font-weight: 600; }
     </style>
 </head>
 <body>
@@ -133,11 +146,18 @@
 
     <header>
         <div class="logo-section"><h1>BS Segmentation Tool</h1></div>
-        <div class="dir-input-container">
+        <div class="dir-input-container" style="width:70%;">
             <button class="btn btn-sec" id="selectDirBtn">📂 Select Folder</button>
             <button class="btn btn-sec" id="selectVideoBtn">🎞️ Select Video</button>
             <input type="text" class="dir-input" id="directoryInput" placeholder="SurgVU Directory or File path...">
             <button class="btn" id="loadDirBtn">Load</button>
+        </div>
+        <div id="surgeryTypeWrap" style="display:flex; gap:6px; align-items:center;">
+            <span style="font-size:12px; color:var(--text-sub); font-weight:600; text-transform:uppercase;">Surgery Type</span>
+            <select id="surgeryTypeSelect" class="operator-select" style="min-width:220px;" title="Video-level surgery classification. Saved to &lt;video&gt;_meta.json.">
+                <option value="">(unset)</option>
+            </select>
+            <button class="btn btn-sec" id="addSurgeryTypeBtn" style="padding:6px 10px; font-size:12px;" title="Add a new surgery type">＋</button>
         </div>
     </header>
 
@@ -160,9 +180,11 @@
             </div>
 
             <div class="diagnostic-report-panel">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
                     <span style="font-size: 15px; font-weight:600; color: #a5b4fc;">📝 Frame Description / Clinical Log</span>
-                    <div style="display:flex; gap:6px;">
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <button class="btn btn-sm" id="undoBtn" title="Undo mask / bbox edit (Ctrl+Z)" style="padding:6px 10px; font-size:13px; background:var(--input-bg); border:1px solid var(--border-color); border-radius:4px;">↶ Undo</button>
+                        <button class="btn btn-sm" id="redoBtn" title="Redo (Ctrl+Y)" style="padding:6px 10px; font-size:13px; background:var(--input-bg); border:1px solid var(--border-color); border-radius:4px;">↷ Redo</button>
                         <button class="btn btn-sm" id="openPhaseBtn" style="padding:6px 12px; font-size:13px; background:var(--accent-color); border-radius:4px;">🏥 Phase</button>
                         <button class="btn btn-sm" id="exportExcelBtn" style="padding:6px 12px; font-size:13px; background:#10b981; border-radius:4px;">📊 Export Excel</button>
                     </div>
@@ -177,6 +199,11 @@
                     <textarea class="report-textarea" id="frameReportTextarea" placeholder="Select an operator above, then type the description for this frame."></textarea>
                     <button class="stt-record-btn" id="sttRecordBtn">🎙️</button>
                 </div>
+                <div style="display:flex; align-items:center; gap:6px; margin-top:8px;">
+                    <span style="font-size:13px; font-weight:600; color:#fbbf24;">🎓 Surgical Coaching</span>
+                    <span style="font-size:11px; color:var(--text-sub);">tip / comment for this frame — saved to &lt;video&gt;_coaching.json</span>
+                </div>
+                <textarea class="report-textarea" id="coachingTextarea" style="height:48px; margin-top:4px; border-color:#fbbf24;" placeholder="Coaching tip for this frame (e.g. keep the plane between fascia and vessel, avoid grasping the pancreas)."></textarea>
             </div>
 
             <div class="collapsible-details">
@@ -193,7 +220,6 @@
                         <button class="btn btn-sm btn-sec" id="timelineNextBtn">Next (D) ▶</button>
                         <span id="frameCounter">Frame: 0 / 0</span>
                         <span id="timeCounter">Time: 00:00 / 00:00</span>
-                        <button class="btn btn-sm" id="flagIntervalBtn" style="background-color: #f59e0b; color: white;">Flag Interval (CSV 자동채움)</button>
                     </div>
                     <input type="range" class="timeline-slider" id="timelineSlider" min="0" max="0" value="0">
                 </div>
@@ -286,6 +312,10 @@
                 <button class="btn btn-sec" id="clearStructureBtn" title="Clear structure selections on this frame"
                         style="padding:3px 8px; font-size:11px; border-color:var(--danger-color); color:var(--danger-color);">Clear frame</button>
             </div>
+            <div style="font-size:11px; color:var(--text-sub); margin-bottom:4px; line-height:1.4;">
+                🏷️ Tag which anatomy is <b>visible</b> in this frame (multi-select).
+                To <b>draw</b> a mask on an organ, add it as an Instrument Class above and paint there.
+            </div>
             <div class="sheet-tabs" id="structureTabs"></div>
             <input type="text" class="class-add-input" id="structureSearchInput" placeholder="🔍 Search structures..." style="flex: none; width: 100%; margin-bottom: 2px;">
             <div class="class-selector-list" id="structureList" style="max-height: 260px;"></div>
@@ -297,9 +327,24 @@
             <div class="tool-options">
                 <div style="display:flex; justify-content:space-between; font-size:13px;"><span>Brush Radius</span><span id="brushSizeVal" style="font-weight:bold;">15 px</span></div>
                 <input type="range" id="brushSize" min="2" max="100" value="15" style="width:100%; accent-color: var(--accent-color);">
-                
+                <div class="preset-row" id="brushPresetRow" style="display:flex; gap:4px;">
+                    <button class="preset-btn" data-brush="5">5</button>
+                    <button class="preset-btn" data-brush="10">10</button>
+                    <button class="preset-btn active" data-brush="15">15</button>
+                    <button class="preset-btn" data-brush="25">25</button>
+                    <button class="preset-btn" data-brush="50">50</button>
+                    <button class="preset-btn" data-brush="80">80</button>
+                </div>
+
                 <div style="display:flex; justify-content:space-between; font-size:13px;"><span>Mask Alpha</span><span id="opacityVal" style="font-weight:bold;">40%</span></div>
                 <input type="range" id="maskOpacity" min="10" max="100" value="40" style="width:100%; accent-color: var(--accent-color);">
+                <div class="preset-row" id="alphaPresetRow" style="display:flex; gap:4px;">
+                    <button class="preset-btn" data-alpha="25">25%</button>
+                    <button class="preset-btn active" data-alpha="40">40%</button>
+                    <button class="preset-btn" data-alpha="60">60%</button>
+                    <button class="preset-btn" data-alpha="80">80%</button>
+                    <button class="preset-btn" data-alpha="100">100%</button>
+                </div>
 
                 <div class="tool-buttons">
                     <button class="btn-tool active" id="drawBtn">🖌️ Brush</button>
@@ -364,6 +409,30 @@
             "#808000","#ffd8b1","#000075","#a9a9a9","#ff8ab9","#7cffbe","#c69fff","#ffe066",
             "#5fa8d3","#b23a48","#7fb069","#dbb42c","#645dd7","#2ec4b6"
         ];
+
+        // Built-in surgery types (video-level big category). Users can extend with the "+" button.
+        // Additions persist per-video in <video>_meta.json (not shared across videos), so a new
+        // type entered here shows up in every video's dropdown for the current session, but only
+        // sticks in the saved meta once selected.
+        const BUILTIN_SURGERY_TYPES = [
+            "Laparoscopic Distal Gastrectomy",
+            "Laparoscopic Total Gastrectomy",
+            "Laparoscopic Wedge Resection of Stomach",
+            "Laparoscopic Sleeve Gastrectomy",
+            "Laparoscopic Proximal Gastrectomy",
+            "Robotic Distal Gastrectomy",
+            "Robotic Total Gastrectomy",
+            "Robotic Wedge Resection of Stomach",
+            "Robotic Proximal Gastrectomy",
+            "Laparoscopic Right Hemicolectomy",
+            "Laparoscopic Left Hemicolectomy",
+            "Laparoscopic Anterior Resection",
+            "Laparoscopic Low Anterior Resection",
+            "Robotic Right Hemicolectomy",
+            "Robotic Left Hemicolectomy",
+            "Robotic Anterior Resection",
+            "Robotic Low Anterior Resection",
+        ];
         const LAPAROSCOPIC_NAMES = [
             "maryland forceps", "fenestrated grasper", "tip up fenestrated forceps",
             "cadiere forceps", "prograsp forceps", "needle driver", "curved scissors",
@@ -371,6 +440,7 @@
             "clip applier (small)", "clip applier (medium-large)", "clip applier (large)",
             "energy device (harmonic)", "energy device (vessel sealer)", "energy device (synchro seal)",
             "suction irrigator",
+            "trocar 3mm", "trocar 5mm", "trocar 8mm", "trocar 12mm",
         ];
         const ROBOTIC_NAMES = [
             "debakey forceps", "straight atraumatic grasper", "curved atraumatic grasper",
@@ -378,6 +448,7 @@
             "metal clip applier", "hemolok clip applier",
             "energy device (ultrasonic)", "energy device (bipolar)", "energy device (monopolar)",
             "scissors", "suction irrigator",
+            "trocar 3mm", "trocar 5mm", "trocar 8mm", "trocar 12mm",
         ];
         const builtinClasses = (() => {
             const out = {};
@@ -480,17 +551,56 @@
                 5: {
                     name: "Etc", full: "Miscellaneous",
                     sub: {
-                        "TP":  { full: "Trocar Placement" },
-                        "PE":  { full: "Peritoneal Exploration" },
-                        "WC":  { full: "Washing Cytology" },
-                        "MDC": { full: "Mesenteric Defect Closure" },
-                        "LT":  { full: "Liver Traction" },
-                        "GI":  { full: "Gauze Insertion" },
-                        "GR":  { full: "Gauze Retrieval" },
-                        "BC":  { full: "Bleeding Control" },
-                        "Irr": { full: "Irrigation" },
-                        "SR":  { full: "Specimen Removal" },
-                        "DI":  { full: "Drain Insertion" },
+                        "TP":       { full: "Trocar Placement" },
+                        "PE":       { full: "Peritoneal Exploration" },
+                        "WC":       { full: "Washing Cytology" },
+                        "MDC":      { full: "Mesenteric Defect Closure" },
+                        "LT":       { full: "Liver Traction" },
+                        "GI":       { full: "Gauze Insertion" },
+                        "GR":       { full: "Gauze Retrieval" },
+                        "BC":       { full: "Bleeding Control" },
+                        "Irr":      { full: "Irrigation" },
+                        "SR":       { full: "Specimen Removal" },
+                        "DI":       { full: "Drain Insertion" },
+                        "DeID":     { full: "De-identification phase (faces / IDs visible)" },
+                        "IRR-Ph":   { full: "Irrelevant phase (unrelated to surgery)" },
+                        "CamClean": { full: "Camera cleaning phase" },
+                    }
+                },
+                // LND is a phase/action; each sub is a nodal station being dissected.
+                // Structure > LN carries the same numbers WITHOUT the LND suffix — that's the
+                // anatomical node itself. The distinction is semantic: LND = doing the dissection,
+                // LN = the node as anatomy.
+                6: {
+                    name: "LND", full: "Lymph Node Dissection",
+                    sub: {
+                        "1 LND":    { full: "Left paracardial LND" },
+                        "2 LND":    { full: "Right paracardial LND" },
+                        "3a LND":   { full: "Lesser curvature LND (3a)" },
+                        "3b LND":   { full: "Lesser curvature LND (3b)" },
+                        "4sa LND":  { full: "Left greater curvature LND (short gastric artery)" },
+                        "4sb LND":  { full: "Left greater curvature LND (left gastroepiploic artery)" },
+                        "4d LND":   { full: "Left greater curvature LND (right gastroepiploic artery)" },
+                        "5 LND":    { full: "Supraduodenal LND" },
+                        "6 LND":    { full: "Infrapyloric LND" },
+                        "7 LND":    { full: "Left gastric LND" },
+                        "8a LND":   { full: "Common hepatic LND (anterior)" },
+                        "8p LND":   { full: "Common hepatic LND (posterior)" },
+                        "9 LND":    { full: "Celiac LND" },
+                        "10 LND":   { full: "Splenic hilar LND" },
+                        "11p LND":  { full: "Proximal splenic LND" },
+                        "11d LND":  { full: "Distal splenic LND" },
+                        "12a LND":  { full: "Hepatoduodenal LND (12a)" },
+                        "12b LND":  { full: "Hepatoduodenal LND (12b)" },
+                        "12p LND":  { full: "Hepatoduodenal LND (12p)" },
+                        "13 LND":   { full: "Posterior surface of Pancreatic head LND" },
+                        "14a LND":  { full: "Superior Mesenteric Artery LND" },
+                        "14v LND":  { full: "Superior Mesenteric Vein LND" },
+                        "15 LND":   { full: "Middle colic vessels LND" },
+                        "16a1 LND": { full: "Paraaortic LND (Diaphragmatic Aortic Hiatus)" },
+                        "16a2 LND": { full: "Paraaortic LND (Celiac artery - Left renal vein)" },
+                        "16b1 LND": { full: "Paraaortic LND (Left renal vein - Inferior mesenteric artery)" },
+                        "16b2 LND": { full: "Paraaortic LND (Left renal vein - Inferior mesenteric artery)" },
                     }
                 },
             },
@@ -586,36 +696,38 @@
                         "MRV":   { full: "Middle Rectal vein" },
                     }
                 },
+                // LN = anatomy (lymph nodes themselves). The action (dissection) lives in
+                // Phase > LND. Station numbers only — no "LND" suffix here.
                 4: {
                     name: "LN", full: "Lymph Node",
                     sub: {
-                        "1 LND":    { full: "Left paracardial LND" },
-                        "2 LND":    { full: "Right paracardial LND" },
-                        "3a LND":   { full: "Lesser curvature LND (3a)" },
-                        "3b LND":   { full: "Lesser curvature LND (3b)" },
-                        "4sa LND":  { full: "Left greater curvature LND (short gastric artery)" },
-                        "4sb LND":  { full: "Left greater curvature LND (left gastroepiploic artery)" },
-                        "4d LND":   { full: "Left greater curvature LND (right gastroepiploic artery)" },
-                        "5 LND":    { full: "Supraduodenal LND" },
-                        "6 LND":    { full: "Infrapyloric LND" },
-                        "7 LND":    { full: "Left gastric LND" },
-                        "8a LND":   { full: "Common hepatic LND (anterior)" },
-                        "8p LND":   { full: "Common hepatic LND (posterior)" },
-                        "9 LND":    { full: "Celiac LND" },
-                        "10 LND":   { full: "Splenic hilar LND" },
-                        "11p LND":  { full: "Proximal splenic LND" },
-                        "11d LND":  { full: "Distal splenic LND" },
-                        "12a LND":  { full: "Hepatoduodenal LND (12a)" },
-                        "12b LND":  { full: "Hepatoduodenal LND (12b)" },
-                        "12p LND":  { full: "Hepatoduodenal LND (12p)" },
-                        "13 LND":   { full: "Posterior surface of Pancreatic head LND" },
-                        "14a LND":  { full: "Superior Mesenteric Artery LND" },
-                        "14v LND":  { full: "Superior Mesenteric Vein LND" },
-                        "15 LND":   { full: "Middle colic vessels LND" },
-                        "16a1 LND": { full: "Paraaortic LND (Diaphragmatic Aortic Hiatus)" },
-                        "16a2 LND": { full: "Paraaortic LND (Celiac artery - Left renal vein)" },
-                        "16b1 LND": { full: "Paraaortic LND (Left renal vein - Inferior mesenteric artery)" },
-                        "16b2 LND": { full: "Paraaortic LND (Left renal vein - Inferior mesenteric artery)" },
+                        "1":    { full: "Left paracardial LN" },
+                        "2":    { full: "Right paracardial LN" },
+                        "3a":   { full: "Lesser curvature LN (3a)" },
+                        "3b":   { full: "Lesser curvature LN (3b)" },
+                        "4sa":  { full: "Left greater curvature LN (short gastric artery)" },
+                        "4sb":  { full: "Left greater curvature LN (left gastroepiploic artery)" },
+                        "4d":   { full: "Left greater curvature LN (right gastroepiploic artery)" },
+                        "5":    { full: "Supraduodenal LN" },
+                        "6":    { full: "Infrapyloric LN" },
+                        "7":    { full: "Left gastric LN" },
+                        "8a":   { full: "Common hepatic LN (anterior)" },
+                        "8p":   { full: "Common hepatic LN (posterior)" },
+                        "9":    { full: "Celiac LN" },
+                        "10":   { full: "Splenic hilar LN" },
+                        "11p":  { full: "Proximal splenic LN" },
+                        "11d":  { full: "Distal splenic LN" },
+                        "12a":  { full: "Hepatoduodenal LN (12a)" },
+                        "12b":  { full: "Hepatoduodenal LN (12b)" },
+                        "12p":  { full: "Hepatoduodenal LN (12p)" },
+                        "13":   { full: "Posterior surface of Pancreatic head LN" },
+                        "14a":  { full: "Superior Mesenteric Artery LN" },
+                        "14v":  { full: "Superior Mesenteric Vein LN" },
+                        "15":   { full: "Middle colic vessels LN" },
+                        "16a1": { full: "Paraaortic LN (Diaphragmatic Aortic Hiatus)" },
+                        "16a2": { full: "Paraaortic LN (Celiac artery - Left renal vein)" },
+                        "16b1": { full: "Paraaortic LN (Left renal vein - Inferior mesenteric artery)" },
+                        "16b2": { full: "Paraaortic LN (Left renal vein - Inferior mesenteric artery)" },
                     }
                 },
                 5: {
@@ -624,6 +736,15 @@
                         "SHPN": { full: "Superior hypogastric plexus" },
                         "HGN":  { full: "Hypogastric nerves" },
                         "PSN":  { full: "Pelvic splanchnic nerves" },
+                        "AVN":  { full: "Anterior Vagus Nerve" },
+                        "PVN":  { full: "Posterior Vagus Nerve" },
+                        "HBV":  { full: "Hepatic branch of vagus" },
+                        "CBV":  { full: "Celiac branch of vagus" },
+                        "CP":   { full: "Celiac plexus" },
+                        "AGB":  { full: "Anterior gastric branches" },
+                        "PGB":  { full: "Posterior gastric branches" },
+                        "ANL":  { full: "Anterior nerve of Latarjet" },
+                        "PNL":  { full: "Posterior nerve of Latarjet" },
                     }
                 },
                 6: {
@@ -638,12 +759,32 @@
                         "MF":  { full: "Mesocolic fascia" },
                     }
                 },
+                7: {
+                    name: "L", full: "Ligament",
+                    sub: {
+                        "HDL": { full: "Hepatoduodenal ligament" },
+                        "GHL": { full: "Gastrohepatic ligament" },
+                        "GPL": { full: "Gastrophrenic ligament" },
+                        "GSL": { full: "Gastrosplenic ligament" },
+                        "PEL": { full: "Phrenoesophageal ligament" },
+                        "SRL": { full: "Splenorenal (lienorenal) ligament" },
+                        "GCL": { full: "Gastrocolic ligament" },
+                    }
+                },
             },
             structureSheet: "1",   // current Structure tab id (matches structureDefinitions key)
             frameStructures: {},
+            // Video-level metadata. surgeryType is the chosen big category (e.g. "Laparoscopic
+            // Distal Gastrectomy"); customSurgeryTypes accumulates user-added names for the
+            // session's dropdown. Both persist through <video>_meta.json.
+            surgeryType: "",
+            customSurgeryTypes: [],
+            // Surgical coaching (수술 tip). Freeform per-frame text, per-operator to match
+            // the Frame Description model — but kept in a separate JSON so the two don't collide.
+            coaching: {},
             bboxStart: null, bboxCurrent: null, isDrawingBbox: false,
             tasksList: [], toolsList: [], csvModified: false, timelineStart: null, timelineEnd: null,
-            undoStack: []
+            undoStack: [], redoStack: []
         };
 
         const MAX_UNDO_HISTORY = 20;
@@ -741,11 +882,13 @@
 
         async function selectFile(idx, type) {
             state.mediaType = type; state.currentIndex = idx;
-            state.undoStack = [];
+            state.undoStack = []; state.redoStack = []; updateUndoRedoButtons();
             renderFileList();
 
             await loadPhasesFromServer(type === "video" ? state.videos[idx] : "");
             await loadStructuresFromServer(type === "video" ? state.videos[idx] : "");
+            await loadMetaFromServer(type === "video" ? state.videos[idx] : "");
+            await loadCoachingFromServer(type === "video" ? state.videos[idx] : "");
 
             const repRes = await postJSON("/api/load_reports", { directory: state.directory, video_name: type === "video" ? state.videos[idx] : "" });
             // 레거시 flat 포맷 → 첫 operator로 마이그레이션
@@ -882,6 +1025,8 @@
             activeReportFrame = fIdx;
             const opData = state.reports[state.currentOperator] || {};
             frameReportTextarea.value = opData[String(fIdx)] || "";
+            const coachEl = $("coachingTextarea");
+            if (coachEl) coachEl.value = state.coaching[String(fIdx)] || "";
             updatePhaseBadge(fIdx);
             updateStructureBadge(fIdx);
             // inline structure panel checkbox state reflects the current frame
@@ -899,6 +1044,14 @@
                 video_name: state.mediaType === "video" ? state.videos[state.currentIndex] : "",
                 reports: state.reports
             });
+            // Coaching text is not operator-scoped — one tip per frame.
+            const coachEl = $("coachingTextarea");
+            if (coachEl) {
+                const cv = coachEl.value.trim();
+                if (cv) state.coaching[String(fIdx)] = cv;
+                else delete state.coaching[String(fIdx)];
+                saveCoachingToServer();
+            }
         }
 
         frameReportTextarea.oninput = (e) => {
@@ -906,6 +1059,16 @@
             if (!state.reports[state.currentOperator]) state.reports[state.currentOperator] = {};
             state.reports[state.currentOperator][String(activeReportFrame)] = e.target.value;
         };
+        // Coaching textarea — write-through so the current frame's tip is never lost between
+        // key events, then persist on frame change / save (same lifecycle as frameReport).
+        (function bindCoachingInput() {
+            const el = $("coachingTextarea");
+            if (!el) return;
+            el.oninput = (e) => {
+                if (activeReportFrame === -1) return;
+                state.coaching[String(activeReportFrame)] = e.target.value;
+            };
+        })();
 
         // ── Surgical Phase annotation ─────────────────────────────────────
         // Data model: sparse "key-frame" map. When user picks a phase on frame N
@@ -918,20 +1081,46 @@
             return { phases: state.framePhases[best].slice(), inherited: best !== frameIdx, sourceFrame: best };
         }
 
+        function _removePhaseOne(subKey) {
+            const curFrame = currentPhaseFrame();
+            const set = new Set((state.framePhases[curFrame] || getEffectivePhases(curFrame).phases));
+            set.delete(subKey);
+            const inheritedNow = new Set(getEffectivePhases(curFrame - 1).phases);
+            const newArr = Array.from(set).sort();
+            const sameAsInherited = newArr.length === inheritedNow.size && newArr.every(v => inheritedNow.has(v));
+            if (sameAsInherited) delete state.framePhases[curFrame];
+            else state.framePhases[curFrame] = newArr;
+            savePhasesToServer();
+            updatePhaseBadge(curFrame);
+            if ($("phaseModal").classList.contains("show")) renderPhaseGrid();
+        }
         function updatePhaseBadge(frameIdx) {
             const badge = $("phaseBadge");
             if (!badge) return;
             const eff = getEffectivePhases(frameIdx);
+            badge.innerHTML = "";
             if (eff.phases.length === 0) {
-                badge.innerText = "No phase set";
                 badge.classList.add("empty");
+                badge.innerText = "No phase set";
                 return;
             }
             badge.classList.remove("empty");
-            const label = eff.phases.join(", ");
-            badge.innerText = eff.inherited
-                ? `🏥 ${label}  ⟵ frame ${eff.sourceFrame}`
-                : `🏥 ${label}`;
+            const prefix = document.createElement("span");
+            prefix.innerText = "🏥"; prefix.style.marginRight = "2px";
+            badge.appendChild(prefix);
+            eff.phases.forEach(p => {
+                const chip = document.createElement("span");
+                chip.className = "badge-chip";
+                chip.innerHTML = `<span>${p}</span><span class="x" title="Remove ${p} from this frame">✕</span>`;
+                chip.querySelector(".x").onclick = () => _removePhaseOne(p);
+                badge.appendChild(chip);
+            });
+            if (eff.inherited) {
+                const src = document.createElement("span");
+                src.style.color = "var(--text-sub)"; src.style.fontSize = "11px";
+                src.innerText = `⟵ frame ${eff.sourceFrame}`;
+                badge.appendChild(src);
+            }
         }
 
         function currentPhaseFrame() {
@@ -1051,20 +1240,47 @@
             if (best === -1) return { structures: [], inherited: false, sourceFrame: null };
             return { structures: state.frameStructures[best].slice(), inherited: best !== frameIdx, sourceFrame: best };
         }
+        function _removeStructureOne(subKey) {
+            const curFrame = currentPhaseFrame();
+            const set = new Set((state.frameStructures[curFrame] || getEffectiveStructures(curFrame).structures));
+            set.delete(subKey);
+            const inheritedNow = new Set(getEffectiveStructures(curFrame - 1).structures);
+            const newArr = Array.from(set).sort();
+            const sameAsInherited = newArr.length === inheritedNow.size && newArr.every(v => inheritedNow.has(v));
+            if (sameAsInherited) delete state.frameStructures[curFrame];
+            else state.frameStructures[curFrame] = newArr;
+            saveStructuresToServer();
+            renderStructureList();
+            updateStructureBadge(curFrame);
+        }
         function updateStructureBadge(frameIdx) {
             const badge = $("structureBadge");
             if (!badge) return;
             const eff = getEffectiveStructures(frameIdx);
+            badge.innerHTML = "";
             if (eff.structures.length === 0) {
-                badge.innerText = "No structure set";
                 badge.classList.add("empty");
+                badge.innerText = "No structure set";
                 return;
             }
             badge.classList.remove("empty");
-            const label = eff.structures.join(", ");
-            badge.innerText = eff.inherited
-                ? `🧬 ${label}  ⟵ frame ${eff.sourceFrame}`
-                : `🧬 ${label}`;
+            const prefix = document.createElement("span");
+            prefix.innerText = "🧬"; prefix.style.marginRight = "2px";
+            badge.appendChild(prefix);
+            eff.structures.forEach(s => {
+                const chip = document.createElement("span");
+                chip.className = "badge-chip";
+                chip.style.background = "rgba(196,181,253,0.28)";
+                chip.innerHTML = `<span>${s}</span><span class="x" title="Remove ${s} from this frame">✕</span>`;
+                chip.querySelector(".x").onclick = () => _removeStructureOne(s);
+                badge.appendChild(chip);
+            });
+            if (eff.inherited) {
+                const src = document.createElement("span");
+                src.style.color = "var(--text-sub)"; src.style.fontSize = "11px";
+                src.innerText = `⟵ frame ${eff.sourceFrame}`;
+                badge.appendChild(src);
+            }
         }
         async function saveStructuresToServer() {
             if (!state.directory) return;
@@ -1078,6 +1294,65 @@
             const res = await postJSON("/api/load_structures", { directory: state.directory, video_name: vidName || "" });
             const data = res && res.structures ? res.structures : {};
             state.frameStructures = (data && data.frames) ? data.frames : {};
+        }
+
+        // ── Surgery Type (video-level meta) ──────────────────────────────
+        function renderSurgeryTypeDropdown() {
+            const sel = $("surgeryTypeSelect");
+            if (!sel) return;
+            sel.innerHTML = "";
+            const opt0 = document.createElement("option");
+            opt0.value = ""; opt0.innerText = "(unset)";
+            sel.appendChild(opt0);
+            const all = [...BUILTIN_SURGERY_TYPES, ...state.customSurgeryTypes];
+            all.forEach(name => {
+                const opt = document.createElement("option");
+                opt.value = name; opt.innerText = name;
+                if (name === state.surgeryType) opt.selected = true;
+                sel.appendChild(opt);
+            });
+            // A surgeryType loaded from disk that's not in the builtin list nor the customs
+            // still needs to show as selected — treat it as an implicit custom.
+            if (state.surgeryType && !all.includes(state.surgeryType)) {
+                const opt = document.createElement("option");
+                opt.value = state.surgeryType; opt.innerText = state.surgeryType; opt.selected = true;
+                sel.appendChild(opt);
+            }
+        }
+
+        async function loadMetaFromServer(vidName) {
+            const res = await postJSON("/api/load_meta", { directory: state.directory, video_name: vidName || "" });
+            const meta = (res && res.meta) ? res.meta : {};
+            state.surgeryType = meta.surgery_type || "";
+            state.customSurgeryTypes = Array.isArray(meta.custom_surgery_types) ? meta.custom_surgery_types : [];
+            renderSurgeryTypeDropdown();
+        }
+
+        async function saveMetaToServer() {
+            if (!state.directory) return;
+            const vidName = state.mediaType === "video" ? state.videos[state.currentIndex] : "";
+            await postJSON("/api/save_meta", {
+                directory: state.directory, video_name: vidName,
+                meta: {
+                    surgery_type: state.surgeryType,
+                    custom_surgery_types: state.customSurgeryTypes,
+                }
+            });
+        }
+
+        // ── Surgical Coaching (수술 tip, freeform per frame) ────────────
+        async function loadCoachingFromServer(vidName) {
+            const res = await postJSON("/api/load_coaching", { directory: state.directory, video_name: vidName || "" });
+            state.coaching = (res && res.coaching) ? res.coaching : {};
+        }
+
+        async function saveCoachingToServer() {
+            if (!state.directory) return;
+            const vidName = state.mediaType === "video" ? state.videos[state.currentIndex] : "";
+            await postJSON("/api/save_coaching", {
+                directory: state.directory, video_name: vidName,
+                coaching: state.coaching,
+            });
         }
         // Inline Structure panel (right sidebar). Tabs = categories (Or/Art/V/LN/N/F),
         // scrollable list = sub-items with multi-select checkboxes. Same sparse-keyframe
@@ -1212,11 +1487,26 @@
                 div.draggable = true;
                 div.dataset.orderIdx = orderIdx;
 
+                // Color indicator is now a real <input type=color> — click to recolor the class
+                // in place, without deleting/re-adding it.
                 div.innerHTML = `
                     <span class="class-drag-handle" title="Drag to reorder">⠿</span>
-                    <div class="color-indicator" style="background:${cls.color}"></div>
+                    <input type="color" class="color-indicator class-color-picker" value="${cls.color}" title="Click to change color">
                     <span style="flex:1; font-size:14px;">${cls.name}</span>
                     <button class="class-del-btn" title="Delete class">✕</button>`;
+
+                const picker = div.querySelector(".class-color-picker");
+                picker.onclick = (e) => e.stopPropagation();
+                picker.oninput = (e) => {
+                    const newColor = e.target.value;
+                    state.classes[cid].color = newColor;
+                    state.classes[cid].rgb = hexToRgb(newColor);
+                    saveClassesToServer();
+                    scheduleRedraw();
+                    // Keep the row's class-item active state; no full re-render needed while dragging
+                    // the color picker — avoid the picker snapping shut mid-adjust.
+                };
+                picker.onchange = () => renderClassList();
 
                 div.querySelector(".class-del-btn").onclick = (e) => {
                     e.stopPropagation();
@@ -1329,25 +1619,11 @@
             return `${String(hrs).padStart(2,"0")}:${String(mins).padStart(2,"0")}:${String(secs).padStart(2,"0")}.${String(ms).padStart(6,"0")}`;
         }
 
-        $("flagIntervalBtn").onclick = () => {
-            if (state.mediaType !== "video" || !state.imageLoaded) return;
-            const curFrame = getCurrentFrameIndex();
-            if (state.timelineStart === null || (state.timelineStart !== null && state.timelineEnd !== null)) {
-                state.timelineStart = curFrame; state.timelineEnd = null; showToast("Start Flagged");
-            } else {
-                state.timelineEnd = curFrame;
-                if (state.timelineEnd < state.timelineStart) { const tmp=state.timelineStart; state.timelineStart=state.timelineEnd; state.timelineEnd=tmp; }
-                showToast("End Flagged -> CSV auto-filled");
-                const startSec = state.timelineStart/state.videoFps, stopSec = state.timelineEnd/state.videoFps;
-                if ($("tabTasksBtn").classList.contains("active")) {
-                    $("taskStartInput").value = startSec.toFixed(3); $("taskStopInput").value = stopSec.toFixed(3);
-                } else {
-                    $("toolInstallInput").value = formatSecondsToHMSf(startSec); $("toolUninstallInput").value = formatSecondsToHMSf(stopSec);
-                }
-            }
-        };
-
         // ── AI Mask Propagation ──────────────────────────────────────────
+        // Bboxes are always carried forward with a simple copy.
+        // Masks: if AI Auto-Propose is on → SAM refinement (slow, better fit).
+        //        if off                    → simple copy (fast, per-pixel identical).
+        // This gives the user an explicit speed/quality knob — checkbox off = instant carry.
         async function propagateMasksAndBboxes(fromFrame, toFrame) {
             if (fromFrame === toFrame || state.mediaType !== "video") return;
             if (!state.frameAnnotations[fromFrame]) return;
@@ -1358,7 +1634,11 @@
             if (fromAnn.bboxes && Object.keys(fromAnn.bboxes).length > 0 && Object.keys(toAnn.bboxes).length === 0)
                 toAnn.bboxes = JSON.parse(JSON.stringify(fromAnn.bboxes));
 
-            if (fromAnn.masks && Object.keys(fromAnn.masks).length > 0 && Object.keys(toAnn.masks).length === 0 && $("aiAutoPropose").checked) {
+            const hasMasks   = fromAnn.masks && Object.keys(fromAnn.masks).length > 0;
+            const targetEmpty = Object.keys(toAnn.masks).length === 0;
+            if (!hasMasks || !targetEmpty) return;
+
+            if ($("aiAutoPropose").checked) {
                 const vidName = state.videos[state.currentIndex];
                 const encodeRes = await postJSON("/api/sam_encode", { directory: state.directory, video_name: vidName, frame_index: toFrame });
                 if (!encodeRes.success) { showToast(encodeRes.error, true); return; }
@@ -1369,7 +1649,22 @@
                     if (res.success && res.rle) toAnn.masks[cid] = rleDecode(res.rle, state.imageWidth, state.imageHeight);
                 });
                 await Promise.all(jobs);
+            } else {
+                // Simple copy — no network / no SAM; instantaneous.
+                Object.keys(fromAnn.masks).forEach(cid => {
+                    if (fromAnn.masks[cid]) toAnn.masks[cid] = new Uint8Array(fromAnn.masks[cid]);
+                });
             }
+        }
+
+        // Debounced background auto-save of masks/bboxes. Called on frame change so
+        // "close the tab, come back tomorrow" doesn't lose work. The manual Save button
+        // still exists for explicit checkpoints and toasts.
+        let _autoSaveTimer = null;
+        function scheduleAutoSave() {
+            if (!state.directory || !state.imageLoaded) return;
+            clearTimeout(_autoSaveTimer);
+            _autoSaveTimer = setTimeout(() => { syncAnnotationsToServer().catch(() => {}); }, 500);
         }
 
         async function changeFrame(delta) {
@@ -1379,6 +1674,7 @@
             if (current === target) return;
 
             saveCurrentFrameReport(activeReportFrame);
+            scheduleAutoSave();
             const autoPropose = $("aiAutoPropose").checked;
             const hasSourceMask  = state.frameAnnotations[current]?.masks && Object.keys(state.frameAnnotations[current].masks).length > 0;
             const targetHasMask  = state.frameAnnotations[target]?.masks  && Object.keys(state.frameAnnotations[target].masks).length  > 0;
@@ -1393,7 +1689,7 @@
 
         function seekToFrame(frameIdx) {
             loadFrameReport(frameIdx);
-            state.undoStack = [];
+            state.undoStack = []; state.redoStack = []; updateUndoRedoButtons();
             if (state.videoPlayMode === "frame_extraction") {
                 state.currentFrameIndexFE = frameIdx;
                 const imgObj = new Image();
@@ -1458,29 +1754,26 @@
             }
         };
 
-        // ── Undo 히스토리 ────────────────────────────────────────────────
-        function saveHistory() {
-            if (!state.imageLoaded) return;
-            let snap;
+        // ── Undo / Redo 히스토리 ────────────────────────────────────────
+        // Snapshot the current frame's mask/bbox state (or the whole image's layers when we're
+        // in image mode). Redo is populated only when we go through performUndo — a fresh edit
+        // clears redo so the two stacks never diverge.
+        function _snapshotCurrent() {
             if (state.mediaType === "video") {
                 const cur = getCurrentFrameIndex();
                 if (!state.frameAnnotations[cur]) state.frameAnnotations[cur] = { masks:{}, bboxes:{} };
                 const masks = {}, bboxes = {};
                 Object.keys(state.frameAnnotations[cur].masks||{}).forEach(c => masks[c] = new Uint8Array(state.frameAnnotations[cur].masks[c]));
                 Object.keys(state.frameAnnotations[cur].bboxes||{}).forEach(c => bboxes[c] = JSON.parse(JSON.stringify(state.frameAnnotations[cur].bboxes[c])));
-                snap = { masks, bboxes };
+                return { masks, bboxes };
             } else {
                 const layers = {};
                 Object.keys(state.layers).forEach(c => layers[c] = new Uint8Array(state.layers[c]));
-                snap = { layers };
+                return { layers };
             }
-            state.undoStack.push(snap);
-            if (state.undoStack.length > MAX_UNDO_HISTORY) state.undoStack.shift();
         }
 
-        function performUndo() {
-            if (!state.undoStack.length) { showToast("Nothing to undo", true); return; }
-            const snap = state.undoStack.pop();
+        function _restoreSnapshot(snap) {
             if (state.mediaType === "video") {
                 const cur = getCurrentFrameIndex();
                 if (!state.frameAnnotations[cur]) state.frameAnnotations[cur] = { masks:{}, bboxes:{} };
@@ -1492,7 +1785,37 @@
                 state.layers = {};
                 Object.keys(snap.layers||{}).forEach(c => state.layers[c] = new Uint8Array(snap.layers[c]));
             }
+        }
+
+        function saveHistory() {
+            if (!state.imageLoaded) return;
+            state.undoStack.push(_snapshotCurrent());
+            if (state.undoStack.length > MAX_UNDO_HISTORY) state.undoStack.shift();
+            // any fresh edit invalidates the redo chain
+            state.redoStack = [];
+            updateUndoRedoButtons();
+        }
+
+        function performUndo() {
+            if (!state.undoStack.length) { showToast("Nothing to undo", true); return; }
+            state.redoStack.push(_snapshotCurrent());
+            _restoreSnapshot(state.undoStack.pop());
             scheduleRedraw(); showToast("Undo");
+            updateUndoRedoButtons();
+        }
+
+        function performRedo() {
+            if (!state.redoStack.length) { showToast("Nothing to redo", true); return; }
+            state.undoStack.push(_snapshotCurrent());
+            _restoreSnapshot(state.redoStack.pop());
+            scheduleRedraw(); showToast("Redo");
+            updateUndoRedoButtons();
+        }
+
+        function updateUndoRedoButtons() {
+            const u = $("undoBtn"), r = $("redoBtn");
+            if (u) u.style.opacity = state.undoStack.length ? "1" : "0.45";
+            if (r) r.style.opacity = state.redoStack.length ? "1" : "0.45";
         }
 
         // ── 폴리곤 채우기 (스캔라인 even-odd) ───────────────────────────
@@ -1593,11 +1916,32 @@
             return { x: Math.round((e.clientX-rect.left)*(state.imageWidth/rect.width)), y: Math.round((e.clientY-rect.top)*(state.imageHeight/rect.height)) };
         }
 
+        // Eraser sweeps ALL mask layers on the frame (any class the cursor touches gets zeroed),
+        // per user request — previously it only affected the currently-selected class.
+        function _allActiveMaskLayers() {
+            if (state.mediaType === "video") {
+                const cur = getCurrentFrameIndex();
+                if (!state.frameAnnotations[cur]) state.frameAnnotations[cur] = { masks:{}, bboxes:{} };
+                return Object.values(state.frameAnnotations[cur].masks || {});
+            }
+            return Object.values(state.layers || {});
+        }
         function paintPixel(pos) {
-            const layer=getActiveMaskLayer(state.currentClass); const r=state.brushSize; const r2=r*r;
+            const r=state.brushSize; const r2=r*r;
             const minX=Math.max(0,pos.x-r), maxX=Math.min(state.imageWidth-1,pos.x+r);
             const minY=Math.max(0,pos.y-r), maxY=Math.min(state.imageHeight-1,pos.y+r);
-            for (let y=minY;y<=maxY;y++) for (let x=minX;x<=maxX;x++) if ((x-pos.x)**2+(y-pos.y)**2<=r2) layer[y*state.imageWidth+x]=state.isEraser?0:1;
+            if (state.isEraser) {
+                const layers = _allActiveMaskLayers();
+                if (!layers.length) return;
+                for (let y=minY;y<=maxY;y++) for (let x=minX;x<=maxX;x++) {
+                    if ((x-pos.x)**2+(y-pos.y)**2>r2) continue;
+                    const idx = y*state.imageWidth+x;
+                    for (const L of layers) L[idx] = 0;
+                }
+            } else {
+                const layer=getActiveMaskLayer(state.currentClass);
+                for (let y=minY;y<=maxY;y++) for (let x=minX;x<=maxX;x++) if ((x-pos.x)**2+(y-pos.y)**2<=r2) layer[y*state.imageWidth+x]=1;
+            }
         }
 
         function interpolateAndPaint(p1, p2) {
@@ -1641,8 +1985,13 @@
             if (state.isDrawingContour && state.isContourMode) {
                 state.isDrawingContour=false;
                 if (state.contourPoints.length>=3) {
-                    const layer=getActiveMaskLayer(state.currentClass);
-                    fillPolygon(layer, state.contourPoints, state.imageWidth, state.imageHeight, state.isEraser?0:1);
+                    if (state.isEraser) {
+                        // Contour eraser wipes every class the polygon covers
+                        _allActiveMaskLayers().forEach(L => fillPolygon(L, state.contourPoints, state.imageWidth, state.imageHeight, 0));
+                    } else {
+                        const layer=getActiveMaskLayer(state.currentClass);
+                        fillPolygon(layer, state.contourPoints, state.imageWidth, state.imageHeight, 1);
+                    }
                 }
                 state.contourPoints=[]; scheduleRedraw();
             }
@@ -1694,8 +2043,38 @@
         $("bboxBtn").onclick    = function() { state.isEraser=false; state.isBboxMode=true;  state.isContourMode=false; setActiveToolBtn(this); };
         function setActiveToolBtn(el) { document.querySelectorAll(".btn-tool").forEach(b=>b.classList.remove("active")); el.classList.add("active"); }
 
-        $("brushSize").oninput  = (e) => { state.brushSize=parseInt(e.target.value); $("brushSizeVal").innerText=`${state.brushSize} px`; };
-        $("maskOpacity").oninput= (e) => { state.opacity=parseInt(e.target.value)/100; $("opacityVal").innerText=`${e.target.value}%`; scheduleRedraw(); };
+        function _syncBrushPreset() {
+            document.querySelectorAll("#brushPresetRow .preset-btn").forEach(b => {
+                b.classList.toggle("active", parseInt(b.dataset.brush) === state.brushSize);
+            });
+        }
+        function _syncAlphaPreset() {
+            const pct = Math.round(state.opacity * 100);
+            document.querySelectorAll("#alphaPresetRow .preset-btn").forEach(b => {
+                b.classList.toggle("active", parseInt(b.dataset.alpha) === pct);
+            });
+        }
+        $("brushSize").oninput  = (e) => { state.brushSize=parseInt(e.target.value); $("brushSizeVal").innerText=`${state.brushSize} px`; _syncBrushPreset(); };
+        $("maskOpacity").oninput= (e) => { state.opacity=parseInt(e.target.value)/100; $("opacityVal").innerText=`${e.target.value}%`; scheduleRedraw(); _syncAlphaPreset(); };
+        document.querySelectorAll("#brushPresetRow .preset-btn").forEach(b => {
+            b.onclick = () => {
+                const v = parseInt(b.dataset.brush);
+                state.brushSize = v;
+                $("brushSize").value = v;
+                $("brushSizeVal").innerText = `${v} px`;
+                _syncBrushPreset();
+            };
+        });
+        document.querySelectorAll("#alphaPresetRow .preset-btn").forEach(b => {
+            b.onclick = () => {
+                const v = parseInt(b.dataset.alpha);
+                state.opacity = v / 100;
+                $("maskOpacity").value = v;
+                $("opacityVal").innerText = `${v}%`;
+                _syncAlphaPreset();
+                scheduleRedraw();
+            };
+        });
         timelineSlider.oninput  = (e) => { seekToFrame(parseInt(e.target.value)); };
         $("timelinePrevBtn").onclick = () => changeFrame(-1);
         $("timelineNextBtn").onclick = () => changeFrame(1);
@@ -1760,7 +2139,9 @@
                 return;
             }
             if (tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
+            if ((e.ctrlKey||e.metaKey)&&e.shiftKey&&key==="z") { e.preventDefault(); performRedo(); return; }
             if ((e.ctrlKey||e.metaKey)&&key==="z") { e.preventDefault(); performUndo(); return; }
+            if ((e.ctrlKey||e.metaKey)&&key==="y") { e.preventDefault(); performRedo(); return; }
             if (key==="a") changeFrame(-1);
             if (key==="d") changeFrame(1);
             if (key==="f") $("contourBtn").click();
@@ -1826,11 +2207,39 @@
         function updateTimelineGUI(f) { $("frameCounter").innerText=`Frame: ${f} / ${state.videoFrameCount-1}`; }
         function showToast(m,isError=false) { const t=$("toast"); t.innerText=m; if(isError)t.classList.add("error");else t.classList.remove("error"); t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000); }
 
+        // ── Undo / Redo buttons ─────────────────────────────────────────
+        $("undoBtn").onclick = performUndo;
+        $("redoBtn").onclick = performRedo;
+        updateUndoRedoButtons();
+
+        // ── Surgery Type dropdown handlers ──────────────────────────────
+        $("surgeryTypeSelect").onchange = function() {
+            state.surgeryType = this.value;
+            saveMetaToServer();
+            const wrap = $("surgeryTypeWrap");
+            if (wrap) wrap.style.outline = state.surgeryType ? "" : "1px solid var(--danger-color)";
+            showToast(state.surgeryType ? `Surgery type: ${state.surgeryType}` : "Surgery type cleared");
+        };
+        $("addSurgeryTypeBtn").onclick = () => {
+            const name = prompt("New surgery type name:");
+            if (!name || !name.trim()) return;
+            const trimmed = name.trim();
+            if ([...BUILTIN_SURGERY_TYPES, ...state.customSurgeryTypes].includes(trimmed)) {
+                showToast("Already in the list", true); return;
+            }
+            state.customSurgeryTypes.push(trimmed);
+            state.surgeryType = trimmed;
+            renderSurgeryTypeDropdown();
+            saveMetaToServer();
+            showToast(`Added surgery type: ${trimmed}`);
+        };
+
         // 초기 렌더
         renderClassList();
         renderOperatorUI();
         renderStructureTabs();
         renderStructureList();
+        renderSurgeryTypeDropdown();
     </script>
 </body>
 </html>

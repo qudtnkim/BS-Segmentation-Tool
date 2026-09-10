@@ -8,8 +8,15 @@
 *_coco.json
 *_phases.json
 *_structures.json
+*_meta.json
+*_coaching.json
 *.csv
 temp_voice.webm
+
+# Office lock files
+~$*.pptx
+~$*.docx
+~$*.xlsx
 
 # Python & System
 __pycache__/
