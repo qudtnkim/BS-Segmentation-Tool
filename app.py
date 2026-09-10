@@ -154,6 +154,53 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/api/pick_folder', methods=['POST'])
+def pick_folder():
+    """Windows(또는 macOS/Linux) 네이티브 폴더 선택창을 띄운다.
+    Flask가 로컬에서 돌 때만 의미가 있음 — tkinter 창은 서버 프로세스의 데스크톱에 뜬다."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)  # 브라우저 뒤로 숨는 문제 방지
+        data = request.json or {}
+        initialdir = data.get('initialdir', '') or os.path.expanduser('~')
+        path = filedialog.askdirectory(initialdir=initialdir, title="Select folder", mustexist=True)
+        root.destroy()
+        if not path:
+            return jsonify({"success": False, "cancelled": True})
+        return jsonify({"success": True, "path": os.path.normpath(path)})
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Native picker failed: {e}"}), 500
+
+
+@app.route('/api/pick_file', methods=['POST'])
+def pick_file():
+    """네이티브 파일 선택창. 영상 확장자 필터를 미리 걸어둔다."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes('-topmost', True)
+        data = request.json or {}
+        initialdir = data.get('initialdir', '') or os.path.expanduser('~')
+        filetypes = [
+            ("Video files", "*.mp4 *.avi *.mkv *.mov"),
+            ("Image files", "*.png *.jpg *.jpeg *.bmp"),
+            ("All files", "*.*"),
+        ]
+        path = filedialog.askopenfilename(initialdir=initialdir, title="Select a video or image",
+                                          filetypes=filetypes)
+        root.destroy()
+        if not path:
+            return jsonify({"success": False, "cancelled": True})
+        return jsonify({"success": True, "path": os.path.normpath(path)})
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Native picker failed: {e}"}), 500
+
+
 @app.route('/api/browse_directory', methods=['POST'])
 def browse_directory():
     data = request.json or {}

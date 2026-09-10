@@ -812,8 +812,34 @@
         function getStep()        { return Math.max(1, parseInt($("frameStepInput").value) || 1); }
 
         // ── 폴더/파일 브라우저 ───────────────────────────────────────────
-        $("selectDirBtn").onclick  = () => { browserMode = "folder"; $("browserModalTitle").innerText = "📂 Select Folder"; $("folderBrowserModal").classList.add("show"); browseTo(""); };
-        $("selectVideoBtn").onclick= () => { browserMode = "file";   $("browserModalTitle").innerText = "🎞️ Select a Video File"; $("folderBrowserModal").classList.add("show"); browseTo(""); };
+        // 우선순위: Windows 네이티브 다이얼로그 (tkinter). 실패하면 내장 브라우저 모달로 폴백.
+        // 로컬 Flask 프로세스가 tkinter 창을 데스크톱에 띄우므로 사용자 입장에서는 OS 표준 창.
+        async function nativePickAndLoad(mode) {
+            // remember-last-dir: reuse the currently loaded folder as `initialdir` so the picker
+            // opens where the user last worked, not %USERPROFILE%
+            const initialdir = state.directory || $("directoryInput").value || "";
+            const url = mode === "folder" ? "/api/pick_folder" : "/api/pick_file";
+            try {
+                const res = await postJSON(url, { initialdir });
+                if (res.cancelled) return true;   // user hit Cancel — do nothing, no fallback
+                if (res.success && res.path) {
+                    $("directoryInput").value = res.path;
+                    loadFolder();
+                    return true;
+                }
+                return false;   // hard failure → open internal browser instead
+            } catch(e) { return false; }
+        }
+        $("selectDirBtn").onclick = async () => {
+            if (await nativePickAndLoad("folder")) return;
+            browserMode = "folder"; $("browserModalTitle").innerText = "📂 Select Folder";
+            $("folderBrowserModal").classList.add("show"); browseTo("");
+        };
+        $("selectVideoBtn").onclick = async () => {
+            if (await nativePickAndLoad("file")) return;
+            browserMode = "file";   $("browserModalTitle").innerText = "🎞️ Select a Video File";
+            $("folderBrowserModal").classList.add("show"); browseTo("");
+        };
         $("cancelBrowserBtn").onclick  = () => $("folderBrowserModal").classList.remove("show");
         $("confirmBrowserBtn").onclick = () => { $("directoryInput").value = $("browserPathInput").value; loadFolder(); $("folderBrowserModal").classList.remove("show"); };
         $("browserUpBtn").onclick  = () => { const p = $("browserPathInput").value; browseTo(p.substring(0, p.lastIndexOf(p.includes("\\") ? "\\" : "/"))); };
