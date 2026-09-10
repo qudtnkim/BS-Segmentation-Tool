@@ -18,7 +18,22 @@ for candidate in python3 python; do
     fi
 done
 if [ -z "$PY" ]; then
-    echo "[ERROR] Python not found. Install Python 3.10+ from https://www.python.org/"
+    echo "[ERROR] Python not found."
+    if [ "$(uname)" = "Darwin" ]; then
+        if command -v brew >/dev/null 2>&1; then
+            echo "  Install with:  brew install python@3.12"
+        else
+            echo "  Install Homebrew (https://brew.sh) then:  brew install python@3.12"
+            echo "  Or download from https://www.python.org/"
+        fi
+    else
+        # Guess the distro's package manager for a copy-pasteable hint
+        if command -v apt >/dev/null 2>&1;    then echo "  Install with:  sudo apt install python3.12 python3.12-venv"
+        elif command -v dnf >/dev/null 2>&1;  then echo "  Install with:  sudo dnf install python3.12"
+        elif command -v pacman >/dev/null 2>&1; then echo "  Install with:  sudo pacman -S python"
+        else echo "  Install Python 3.10+ via your package manager or https://www.python.org/"
+        fi
+    fi
     exit 1
 fi
 echo "[OK] Python found: $($PY --version)"
