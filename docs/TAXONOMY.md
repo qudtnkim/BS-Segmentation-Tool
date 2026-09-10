@@ -1,52 +1,31 @@
 # Annotation Taxonomy
 
 Gastric + colorectal surgery annotation taxonomies used by BS-Segmentation-Tool.
-Leaf labels are the abbreviations that get saved to JSON; the text after `—` is the tooltip / full name.
+Leaf labels are the abbreviations that get saved to JSON; the text after `—` is
+the tooltip / full name.
 
-Change (2026-08): LND category moved from Phase → Structure (as **LN**); Phase gains **Om** (Omentectomy) and colorectal items in VL/OT/OR; Structure gains **LN**, **N** (Nerve), **F** (Fascia).
+Change (2026-09): The LND concept split into two: **Phase > LND** captures the
+dissection action (station numbers carry an `LND` suffix), **Structure > LN**
+captures the node as anatomy (station numbers only). Phase Etc gains
+De-identification / Irrelevant / Camera cleaning. Structure gains a **Ligament
+(L)** category, and Nerve (N) is extended with 9 Vagus-family items.
 
 ---
 
-## Surgical Phase (5 categories, 43 sub-phases)
+## Surgical Phase (6 categories, 73 sub-phases)
 
 - **Root**
   - **Om** — Omentectomy (2)
     - PO — Partial Omentectomy
     - TO — Total Omentectomy
   - **VL** — Vessel Ligation (15)
-    - LGEV — Left Gastro Epiploic Vessel Ligation
-    - RGEV — Right Gastro Epiploic Vessel Ligation
-    - RGV — Right Gastric Vessel Ligation
-    - LGV — Left Gastric Vessel Ligation
-    - SGV — Short Gastric Vessel Ligation
-    - PGV — Posterior Gastric Vessel Ligation
-    - RCV — Right Colic Vessel Ligation
-    - MCV — Middle Colic Vessel Ligation
-    - ICVL — Ileocolic Vessel Ligation
-    - RCVL — Right Colic Vessel Ligation
-    - MCVL — Middle Colic Vessel Ligation
-    - RBMCVL — Middle Colic Vessel Right Branch Ligation
-    - LCVL — Left Colic Vessel Ligation
-    - IMVL — Inferior Mesenteric Vessel Ligation
-    - MRVL — Middle Rectal Vessel Ligation
+    - LGEV, RGEV, RGV, LGV, SGV, PGV, RCV, MCV
+    - ICVL, RCVL, MCVL, RBMCVL, LCVL, IMVL, MRVL
   - **OT** — Organ Transection (7)
-    - DT — Duodenum Transection
-    - ST — Stomach Transection
-    - ET — Esophagus Transection
-    - JT — Jejunum Transection
-    - CT — Colon Transection
-    - IT — Ileum Transection
-    - RT — Rectum Transection
+    - DT, ST, ET, JT, CT, IT, RT
   - **OR** — Organ Reconstruction (8)
-    - GJ — GastroJejunostomy
-    - GD — GastroDuodenostomy
-    - EJ — EsophagoJejunostomy
-    - JJ — JejunoJejunostomy
-    - EG — EsophagoGastrostomy
-    - IC — Ileocolostomy
-    - CC — Colocolostomy
-    - CR — Colorectostomy
-  - **Etc** — Miscellaneous (11)
+    - GJ, GD, EJ, JJ, EG, IC, CC, CR
+  - **Etc** — Miscellaneous (14)
     - TP — Trocar Placement
     - PE — Peritoneal Exploration
     - WC — Washing Cytology
@@ -58,120 +37,64 @@ Change (2026-08): LND category moved from Phase → Structure (as **LN**); Phase
     - Irr — Irrigation
     - SR — Specimen Removal
     - DI — Drain Insertion
+    - **DeID** — De-identification phase (faces / IDs visible)
+    - **IRR-Ph** — Irrelevant phase (unrelated to surgery)
+    - **CamClean** — Camera cleaning phase
+  - **LND** — Lymph Node Dissection (27) *(action; station numbers carry "LND")*
+    - 1 LND, 2 LND, 3a LND, 3b LND
+    - 4sa LND, 4sb LND, 4d LND
+    - 5 LND, 6 LND, 7 LND
+    - 8a LND, 8p LND, 9 LND, 10 LND
+    - 11p LND, 11d LND
+    - 12a LND, 12b LND, 12p LND
+    - 13 LND, 14a LND, 14v LND, 15 LND
+    - 16a1 LND, 16a2 LND, 16b1 LND, 16b2 LND
 
 ---
 
-## Anatomical Structure (6 categories, 105 sub-structures)
+## Anatomical Structure (7 categories, 121 sub-structures)
 
 - **Root**
-  - **Or** — Organ (20)
-    - Sto — Stomach
-    - Eso — Esophagus
-    - Duo — Duodenum
-    - SI — Small Intestine
-    - Lv — Liver
-    - Panc — Pancreas
-    - Spl — Spleen
-    - Col — Colon
-    - Rec — Rectum
-    - Mscol — Mesocolon
-    - Gb — Gallbladder
-    - Diap — Diaphragm
-    - Crus — Crus muscle
-    - Fal — Falciform ligament
-    - Rlig — Round ligament
-    - App — Appendix
-    - Ut — Uterus
-    - Ov — Ovary
-    - Lu — Lung
-    - H — Heart
-  - **Art** — Artery (24)
-    - CT — Celiac trunk
-    - LGA — Left gastric artery
-    - CHA — Common hepatic artery
-    - RGA — Right gastric artery
-    - PHA — Proper hepatic artery
-    - RHA — Right hepatic artery
-    - LHA — Left hepatic artery
-    - GDA — Gastroduodenal artery
-    - IPA — Infrapyloric artery
-    - RGEA — Right gastroepiploic artery
-    - ASPDA — Anterior superior pancreaticoduodenal artery
-    - SA — Splenic artery
-    - LGEA — Left gastroepiploic artery
-    - Ob LGEA — Omental branch of left gastroepiploic artery
-    - SGA — Short gastric artery
-    - SMA — Superior mesenteric artery
-    - ICA — Ileo-colic artery
-    - RCA — Right colic artery
-    - MCA — Middle colic artery
-    - LCA — Left colic artery
-    - IMA — Inferior Mesenteric artery
-    - MA — Marginal artery
-    - SRA — Superior Rectal artery
-    - MRA — Middle Rectal artery
-  - **V** — Vein (24)
-    - LGV — Left gastric vein
-    - SV — Splenic vein
-    - PV — Portal vein
-    - SMV — Superior mesenteric vein
-    - GCT — Gastrocolic trunk
-    - RGEV — Right gastroepiploic vein
-    - ASPDV — Anterior superior pancreaticoduodenal vein
-    - ARCV — Accessary right colic vein
-    - SGV — Short gastric vein
-    - LGEV — Left gastroepiploic vein
-    - RGV — Right gastric vein
-    - ICV — Ileo-colic vein
-    - RCV — Right colic vein
-    - GCV — Gastro colic vein
-    - MCV — Middle colic vein
-    - LCV — Left colic vein
-    - LHV — Left hepatic vein
-    - RHV — Right hepatic vein
-    - MHV — Middle hepatic vein
-    - IVC — Inferior Vena Cava
-    - IMV — Inferior Mesenteric vein
-    - MV — Marginal vein
-    - SRV — Superior Rectal vein
-    - MRV — Middle Rectal vein
-  - **LN** — Lymph Node (27)
-    - 1 LND — Left paracardial LND
-    - 2 LND — Right paracardial LND
-    - 3a LND — Lesser curvature LND (3a)
-    - 3b LND — Lesser curvature LND (3b)
-    - 4sa LND — Left greater curvature LND (short gastric artery)
-    - 4sb LND — Left greater curvature LND (left gastroepiploic artery)
-    - 4d LND — Left greater curvature LND (right gastroepiploic artery)
-    - 5 LND — Supraduodenal LND
-    - 6 LND — Infrapyloric LND
-    - 7 LND — Left gastric LND
-    - 8a LND — Common hepatic LND (anterior)
-    - 8p LND — Common hepatic LND (posterior)
-    - 9 LND — Celiac LND
-    - 10 LND — Splenic hilar LND
-    - 11p LND — Proximal splenic LND
-    - 11d LND — Distal splenic LND
-    - 12a LND — Hepatoduodenal LND (12a)
-    - 12b LND — Hepatoduodenal LND (12b)
-    - 12p LND — Hepatoduodenal LND (12p)
-    - 13 LND — Posterior surface of Pancreatic head LND
-    - 14a LND — Superior Mesenteric Artery LND
-    - 14v LND — Superior Mesenteric Vein LND
-    - 15 LND — Middle colic vessels LND
-    - 16a1 LND — Paraaortic LND (Diaphragmatic Aortic Hiatus)
-    - 16a2 LND — Paraaortic LND (Celiac artery – Left renal vein)
-    - 16b1 LND — Paraaortic LND (Left renal vein – Inferior mesenteric artery)
-    - 16b2 LND — Paraaortic LND (Left renal vein – Inferior mesenteric artery)
-  - **N** — Nerve (3)
-    - SHPN — Superior hypogastric plexus
-    - HGN — Hypogastric nerves
-    - PSN — Pelvic splanchnic nerves
-  - **F** — Fascia (7)
-    - MRF — Mesorectal fascia
-    - PSF — Presacral fascia
-    - WF — Waldeyer's fascia
-    - DF — Denonvilliers' fascia
-    - GF — Gerota's fascia
-    - TF — Toldt's fascia
-    - MF — Mesocolic fascia
+  - **Or** — Organ (20) — unchanged
+  - **Art** — Artery (24) — unchanged
+  - **V** — Vein (24) — unchanged
+  - **LN** — Lymph Node (27) *(anatomy; station numbers only, no LND suffix)*
+    - 1, 2, 3a, 3b, 4sa, 4sb, 4d
+    - 5, 6, 7, 8a, 8p, 9, 10, 11p, 11d
+    - 12a, 12b, 12p, 13, 14a, 14v, 15
+    - 16a1, 16a2, 16b1, 16b2
+  - **N** — Nerve (12) *(extended)*
+    - SHPN, HGN, PSN (pelvic autonomic)
+    - **AVN** — Anterior Vagus Nerve
+    - **PVN** — Posterior Vagus Nerve
+    - **HBV** — Hepatic branch of vagus
+    - **CBV** — Celiac branch of vagus
+    - **CP**  — Celiac plexus
+    - **AGB** — Anterior gastric branches
+    - **PGB** — Posterior gastric branches
+    - **ANL** — Anterior nerve of Latarjet
+    - **PNL** — Posterior nerve of Latarjet
+  - **F** — Fascia (7) — unchanged
+  - **L** — Ligament (7) *(new)*
+    - HDL — Hepatoduodenal ligament
+    - GHL — Gastrohepatic ligament
+    - GPL — Gastrophrenic ligament
+    - GSL — Gastrosplenic ligament
+    - PEL — Phrenoesophageal ligament
+    - SRL — Splenorenal (lienorenal) ligament
+    - GCL — Gastrocolic ligament
+
+---
+
+## Structural notes
+
+* Phase and Structure both use sparse-keyframe carry-forward semantics. Only frames
+  where the selection **changes** are recorded; effective selection at frame N is
+  the nearest key ≤ N. See `getEffectivePhases()` / `getEffectiveStructures()` in
+  `templates/index.html`.
+* Structure is a **tagging** surface (multi-select checkboxes), not a drawing
+  target. To segment an organ, add it as an Instrument Class and paint on the
+  canvas.
+* PNG trees regenerated by `python docs/draw_taxonomy.py` after any taxonomy
+  change; keep this file and the two PNGs in sync with `state.phaseDefinitions`
+  / `state.structureDefinitions`.
